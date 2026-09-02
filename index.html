@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generador de Guía Metodológica</title>
+<title>Generador de Guía Metodológica - Gemini</title>
 <style>
   :root{
     --azul-principal:#02244F;
@@ -213,6 +213,7 @@
     border-radius:9px;
     font-size:13.5px;
     margin-top:16px;
+    margin-bottom:16px;
   }
 
   .upload-box{
@@ -221,9 +222,6 @@
     padding:16px;
     margin-top:8px;
     background:#FAFBFD;
-  }
-  .upload-box input[type=file]{
-    font-size:13px;
   }
   .upload-status{
     margin-top:12px;
@@ -235,10 +233,6 @@
     color:#1E6B34;
     padding:10px 12px;
     border-radius:8px;
-  }
-  .upload-status.loading{
-    color:var(--azul-secundario);
-    font-weight:600;
   }
   .upload-preview{
     margin-top:8px;
@@ -322,6 +316,7 @@
     line-height:1.65;
     color:#2B384A;
     white-space:pre-wrap;
+    margin:0 0 12px 0;
   }
   .doc-list{
     margin:6px 0 0 22px;
@@ -363,24 +358,6 @@
     color:var(--azul-principal);
     width:34%;
   }
-  .pill{
-    display:inline-block;
-    background:var(--dorado);
-    color:var(--azul-principal);
-    font-weight:700;
-    font-size:11px;
-    padding:3px 10px;
-    border-radius:999px;
-    margin-bottom:8px;
-  }
-  .doc-footer{
-    text-align:center;
-    padding:18px;
-    font-size:11.5px;
-    color:#8B96A5;
-    border-top:1px solid #EEF1F5;
-  }
-
   .export-bar{
     display:flex;
     gap:10px;
@@ -388,16 +365,23 @@
     flex-wrap:wrap;
     margin:18px 0 0;
   }
-
+  .doc-footer{
+    text-align:center;
+    padding:18px;
+    font-size:11.5px;
+    color:#8B96A5;
+    border-top:1px solid #EEF1F5;
+    margin-top:20px;
+  }
   @media print{
     body{background:#fff;}
     .app{max-width:100%;padding:0;}
     .topbar, .steps, .export-bar, .no-print{display:none !important;}
     .doc-wrap{box-shadow:none;}
+    .page-break{page-break-before:always;}
   }
 </style>
 
-<!-- Librerías de Extracción y Generación PDF vía CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -426,50 +410,36 @@
 </div>
 
 <script>
-// --- DATOS INSTITUCIONALES (Catálogos) ---
+// --- DATOS INSTITUCIONALES ---
 const FACULTADES = [
-  "Facultad de Humanidades",
-  "Facultad de Ciencias de la Educación",
-  "Facultad de Ciencias Básicas",
-  "Facultad de Tecnología (FATEC)",
-  "FUNDAUPN",
-  "Otro"
+  "Facultad de Humanidades", "Facultad de Ciencias de la Educación", 
+  "Facultad de Ciencias Básicas", "Facultad de Tecnología (FATEC)", 
+  "FUNDAUPN", "Otro"
 ];
 
 const DEPARTAMENTOS = {
-  "Facultad de Ciencias de la Educación": [
-    "Administración y Gestión de la Educación", "Educación Básica (FID)", "Educación Preescolar", "Educación Especial", "Orientación Educativa", "Otro"
-  ],
-  "Facultad de Ciencias Básicas": [
-    "Ciencias Naturales", "Ciencias Matemáticas", "Educación Física", "Otro"
-  ],
-  "Facultad de Humanidades": [
-    "Ciencias Sociales", "Letras y Lenguas / Enseñanza del Español", "Enseñanza del Inglés", "Educación Artística", "Otro"
-  ],
-  "Facultad de Tecnología (FATEC)": [
-    "Educación Comercial", "Educación Técnica Industrial", "Turismo y Hostelería", "Informática Educativa", "Otro"
-  ],
+  "Facultad de Ciencias de la Educación": ["Administración y Gestión de la Educación", "Educación Básica (FID)", "Educación Preescolar", "Educación Especial", "Orientación Educativa", "Otro"],
+  "Facultad de Ciencias Básicas": ["Ciencias Naturales", "Ciencias Matemáticas", "Educación Física", "Otro"],
+  "Facultad de Humanidades": ["Ciencias Sociales", "Letras y Lenguas / Enseñanza del Español", "Enseñanza del Inglés", "Educación Artística", "Otro"],
+  "Facultad de Tecnología (FATEC)": ["Educación Comercial", "Educación Técnica Industrial", "Turismo y Hostelería", "Informática Educativa", "Otro"],
   "FUNDAUPN": ["Otro"],
   "Otro": ["Otro"]
 };
 
 const MODALIDADES = [
-  "Modalidad Presencial (Sistema Regular)",
-  "Modalidad a Distancia (VREAD)",
-  "Modalidad Semipresencial / Híbrida",
-  "Programas Especiales de Profesionalización (PREUFOD / PFP)"
+  "Modalidad Presencial (Sistema Regular)", "Modalidad a Distancia (VREAD)", 
+  "Modalidad Semipresencial / Híbrida", "Programas Especiales de Profesionalización (PREUFOD / PFP)"
 ];
 
-// --- ESTADO Y VARIABLES GLOBALES ---
+// --- ESTADO GLOBAL ---
 const state = {
   step: 1,
   loading: false,
   error: null,
-  config: {
-    provider: localStorage.getItem('gm_provider') || 'gemini',
-    apiKey: localStorage.getItem('gm_apiKey') || '',
-    model: localStorage.getItem('gm_model') || 'gemini-1.5-flash',
-    baseUrl: localStorage.getItem('gm_baseUrl') || 'https://api.openai.com/v1'
+  config: { 
+    // Usamos por defecto tu API Key y modelo de Gemini
+    apiKey: localStorage.getItem('gm_apiKey') || 'AIzaSyAWILbaZjYFjBbH0TVRW3nyzLEzjQl4-rI',
+    model: localStorage.getItem('gm_model') || 'gemini-1.5-flash'
   },
   docente: { nombre: '', email: '', horarioAtencion: '' },
   espacio: {
@@ -484,39 +454,32 @@ const state = {
   generated: null
 };
 
-const stepsNames = [
-  '1. Configuración e IA',
-  '2. Datos de Asignatura',
-  '3. Sílabo y Planificación',
-  '4. Guía Metodológica'
-];
+const stepsNames = ['Paso 1: Datos Docente', 'Paso 2: Datos Espacio', 'Paso 3: Insumos e IA', 'Paso 4: Guía Generada'];
 
 function getFacultadFinal(){ return state.espacio.facultad === 'Otro' ? (state.espacio.facultadOtro || 'Otro') : state.espacio.facultad; }
 function getDeptoFinal(){ return state.espacio.depto === 'Otro' ? (state.espacio.deptoOtro || 'Otro') : state.espacio.depto; }
 
-// --- INICIALIZACIÓN Y ROUTER ---
 function init(){
-  renderSteps();
+  renderStepsNav();
   renderContent();
 }
 
-function renderSteps(){
+function renderStepsNav(){
   const nav = document.getElementById('stepsNav');
-  const badge = document.getElementById('stepBadge');
-  badge.textContent = `Paso ${state.step} de 4`;
+  document.getElementById('stepBadge').textContent = `Paso ${state.step} de 4`;
   nav.innerHTML = '';
   
-  stepsNames.forEach((name, idx) => {
-    const num = idx + 1;
+  stepsNames.forEach((title, idx) => {
+    const sNum = idx + 1;
     const dot = document.createElement('div');
-    dot.className = `step-dot ${state.step === num ? 'active' : ''} ${state.step > num ? 'done' : ''}`;
-    dot.textContent = name;
+    dot.className = `step-dot ${state.step === sNum ? 'active' : ''} ${state.step > sNum ? 'done' : ''}`;
+    dot.textContent = title;
     dot.onclick = () => {
       if(state.loading) return;
-      if(num < state.step || validarPasoActual(state.step)){
-        state.step = num;
+      if(sNum < state.step || validarPasoActual(state.step)){
+        state.step = sNum;
         state.error = null;
-        renderSteps();
+        renderStepsNav();
         renderContent();
       }
     };
@@ -525,7 +488,7 @@ function renderSteps(){
 }
 
 function validarPasoActual(step){
-  if(step === 1) return !!state.config.apiKey;
+  if(step === 1) return !!state.config.apiKey && !!state.docente.nombre;
   if(step === 2) return !!state.espacio.nombreEspacio;
   return true;
 }
@@ -539,8 +502,8 @@ function renderContent(){
       <div class="card">
         <div class="loading-wrap">
           <div class="spinner"></div>
-          <div class="loading-msg">Generando guía con ${state.config.provider.toUpperCase()}...</div>
-          <p class="hint" style="margin-top:10px;">El modelo ${state.config.model} está procesando el guion instruccional.</p>
+          <div class="loading-msg">Generando guía con Google Gemini...</div>
+          <p class="hint" style="margin-top:10px;">El modelo ${state.config.model} está procesando el guion instruccional de forma segura.</p>
         </div>
       </div>
     `;
@@ -550,7 +513,7 @@ function renderContent(){
   if(state.error){
     const errBox = document.createElement('div');
     errBox.className = 'error-box';
-    errBox.innerHTML = `<strong>Error:</strong> ${state.error}`;
+    errBox.innerHTML = `<strong>Atención:</strong> ${escapeHtml(state.error)}`;
     container.appendChild(errBox);
   }
 
@@ -560,47 +523,32 @@ function renderContent(){
   else if(state.step === 4) renderStep4(container);
 }
 
-// --- PASO 1: Configuración de IA y Docente ---
+// --- PASO 1 ---
 function renderStep1(container){
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `
-    <h2>Paso 1: Configuración de <span>IA y Docente</span></h2>
+    <h2>Paso 1: Configuración y Datos del <span>Profesor(a)</span></h2>
     
-    <!-- Configuración IA -->
-    <div style="background:#F8F9FA; padding:15px; border-radius:8px; border:1px solid #E2E8F0; margin-bottom:20px;">
-      <h3 style="margin:0 0 10px 0; font-size:14px; color:var(--azul-principal);">Configuración de Inteligencia Artificial</h3>
+    <div style="background:#F8F9FA; padding:18px; border-radius:10px; border:1px solid #E2E8F0; margin-bottom:24px;">
+      <h3 style="margin:0 0 12px 0; font-size:15px; color:var(--azul-principal);">Configuración de Google Gemini</h3>
       <div class="grid2">
         <div>
-          <label>Proveedor de IA</label>
-          <select id="selProvider" onchange="cambiarProveedor(this.value)">
-            <option value="gemini" ${state.config.provider === 'gemini' ? 'selected' : ''}>Google Gemini</option>
-            <option value="anthropic" ${state.config.provider === 'anthropic' ? 'selected' : ''}>Anthropic (Claude)</option>
-            <option value="openai" ${state.config.provider === 'openai' ? 'selected' : ''}>OpenAI (ChatGPT)</option>
-            <option value="compatible" ${state.config.provider === 'compatible' ? 'selected' : ''}>Compatible (DeepSeek, Groq, etc.)</option>
-          </select>
+          <label>Modelo (Google Gemini)</label>
+          <input type="text" id="txtModel" value="${state.config.model}" placeholder="gemini-1.5-flash">
         </div>
         <div>
-          <label>Modelo</label>
-          <input type="text" id="txtModel" value="${state.config.model}">
+          <label class="required">API Key</label>
+          <input type="password" id="txtApiKey" value="${state.config.apiKey}">
         </div>
       </div>
-      <div id="boxBaseUrl" style="display: ${state.config.provider === 'compatible' ? 'block' : 'none'}; margin-top:10px;">
-        <label>Base URL de la API</label>
-        <input type="text" id="txtBaseUrl" value="${state.config.baseUrl}">
-      </div>
-      <div style="margin-top:10px;">
-        <label class="required">API Key</label>
-        <input type="password" id="txtApiKey" value="${state.config.apiKey}" placeholder="Pega tu API Key aquí">
-        <div class="hint">Tus datos se guardan solo en tu navegador localmente.</div>
-      </div>
+      <div class="hint" style="margin-top:10px;">Tu clave de Gemini se procesa localmente.</div>
     </div>
 
-    <!-- Datos Docente -->
     <label class="required">Nombre del Docente</label>
     <input type="text" id="doc_nombre" value="${state.docente.nombre}" placeholder="Ej: Kenfor Euceda">
 
-    <div class="grid2" style="margin-top:10px;">
+    <div class="grid2" style="margin-top:12px;">
       <div>
         <label class="required">Correo Institucional</label>
         <input type="email" id="doc_email" value="${state.docente.email}" placeholder="correo@upnfm.edu.hn">
@@ -619,59 +567,32 @@ function renderStep1(container){
   container.appendChild(card);
 }
 
-function cambiarProveedor(prov){
-  state.config.provider = prov;
-  const baseUrlBox = document.getElementById('boxBaseUrl');
-  const txtModel = document.getElementById('txtModel');
-
-  if(prov === 'anthropic'){
-    baseUrlBox.style.display = 'none';
-    txtModel.value = 'claude-3-5-sonnet-20241022';
-  } else if(prov === 'openai'){
-    baseUrlBox.style.display = 'none';
-    txtModel.value = 'gpt-4o';
-  } else if(prov === 'gemini'){
-    baseUrlBox.style.display = 'none';
-    txtModel.value = 'gemini-1.5-flash';
-  } else if(prov === 'compatible'){
-    baseUrlBox.style.display = 'block';
-    txtModel.value = 'deepseek-chat';
-  }
-}
-
 function guardarPaso1(){
-  const provider = document.getElementById('selProvider').value;
   const model = document.getElementById('txtModel').value.trim();
   const apiKey = document.getElementById('txtApiKey').value.trim();
-  const baseUrl = document.getElementById('txtBaseUrl') ? document.getElementById('txtBaseUrl').value.trim() : '';
 
   const nombre = document.getElementById('doc_nombre').value.trim();
   const email = document.getElementById('doc_email').value.trim();
   const horario = document.getElementById('doc_horario').value.trim();
 
   if(!apiKey || !nombre || !email || !horario){
-    state.error = 'Por favor ingresa la API Key y los datos del docente requeridos.';
+    state.error = 'Por favor ingresa la API Key y todos los datos del docente marcados como requeridos.';
     renderContent();
     return;
   }
 
-  state.config.provider = provider;
-  state.config.apiKey = apiKey;
-  state.config.model = model;
-  state.config.baseUrl = baseUrl;
-  localStorage.setItem('gm_provider', provider);
+  state.config = { apiKey, model };
   localStorage.setItem('gm_apiKey', apiKey);
   localStorage.setItem('gm_model', model);
-  localStorage.setItem('gm_baseUrl', baseUrl);
 
   state.docente = { nombre, email, horarioAtencion: horario };
   state.error = null;
   state.step = 2;
-  renderSteps();
+  renderStepsNav();
   renderContent();
 }
 
-// --- PASO 2: Datos del Espacio Pedagógico ---
+// --- PASO 2 ---
 function renderStep2(container){
   const card = document.createElement('div');
   card.className = 'card';
@@ -742,7 +663,7 @@ function renderStep2(container){
     </div>
 
     <div class="nav-row">
-      <button class="btn-secondary" onclick="state.step=1; renderSteps(); renderContent();">← Paso Anterior</button>
+      <button class="btn-secondary" onclick="state.step=1; renderStepsNav(); renderContent();">← Paso Anterior</button>
       <button class="btn-primary" onclick="guardarPaso2()">Continuar a Sílabo e IA →</button>
     </div>
   `;
@@ -781,24 +702,24 @@ function guardarPaso2(){
   }
   state.error = null;
   state.step = 3;
-  renderSteps();
+  renderStepsNav();
   renderContent();
 }
 
-// --- PASO 3: Carga de Archivos e IA ---
+// --- PASO 3 ---
 function renderStep3(container){
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `
     <h2>Paso 3: Descripción y <span>Documento de Referencia</span></h2>
-    <p class="hint">Carga el programa en PDF/Word o redacta las indicaciones clave. Mínimo uno de los dos es requerido.</p>
+    <p class="hint">Sube el programa oficial de la asignatura en PDF/Word o redacta las indicaciones clave. Mínimo uno de los dos es requerido.</p>
 
     <div class="upload-box">
       <label style="margin-top:0;">Cargar Documento (.docx o .pdf)</label>
       <input type="file" id="fileInput" accept=".docx, .pdf" onchange="procesarArchivo(this)">
       <div id="uploadStatus" class="upload-status ${state.uploadedFile.status === 'ready' ? 'ready' : ''}" style="${state.uploadedFile.name ? 'display:block;':'display:none;'}">
         ${state.uploadedFile.status === 'loading' ? 'Extrayendo texto...' : ''}
-        ${state.uploadedFile.status === 'ready' ? `✓ <strong>${escapeHtml(state.uploadedFile.name)}</strong>:${state.uploadedFile.text.length} caracteres extraídos.` : ''}
+        ${state.uploadedFile.status === 'ready' ? `✓ <strong>${escapeHtml(state.uploadedFile.name)}</strong>: ${state.uploadedFile.text.length} caracteres extraídos.` : ''}
         ${state.uploadedFile.status === 'error' ? `✕ Error: ${escapeHtml(state.uploadedFile.error)}` : ''}
       </div>
       <div id="uploadPreview" class="upload-preview" style="${state.uploadedFile.text ? 'display:block;':'display:none;'}">
@@ -810,11 +731,11 @@ function renderStep3(container){
     <div class="divider-or">O BIEN, INGRESA INSTRUCCIONES MANUALMENTE</div>
 
     <label>Descripción y Temas Clave</label>
-    <textarea id="txt_desc" placeholder="Escribe aquí los temas o competencias a desarrollar...">${escapeHtml(state.descripcion)}</textarea>
+    <textarea id="txt_desc" placeholder="Escribe aquí los temas, el enfoque metodológico o las actividades esperadas...">${escapeHtml(state.descripcion)}</textarea>
 
     <div class="nav-row">
-      <button class="btn-secondary" onclick="state.step=2; renderSteps(); renderContent();">← Paso Anterior</button>
-      <button class="btn-primary" onclick="ejecutarGeneracion()">Generar Guía con IA ✨</button>
+      <button class="btn-secondary" onclick="state.step=2; renderStepsNav(); renderContent();">← Paso Anterior</button>
+      <button class="btn-primary" onclick="ejecutarGeneracion()">Generar Guía con Gemini ✨</button>
     </div>
   `;
   container.appendChild(card);
@@ -863,13 +784,13 @@ async function procesarArchivo(input){
   renderContent();
 }
 
-// === GENERACIÓN CON IA ===
+// === GENERACIÓN CON GEMINI ===
 async function ejecutarGeneracion(){
   state.descripcion = document.getElementById('txt_desc').value.trim();
-  
   const fileText = state.uploadedFile.status === 'ready' ? state.uploadedFile.text.slice(0, 12000) : '';
+  
   if(fileText.length < 20 && state.descripcion.length < 15){
-    state.error = 'Sube un archivo válido o redacta al menos 15 caracteres en la descripción.';
+    state.error = 'Debes subir un documento de referencia o escribir una descripción mínima para generar la guía.';
     renderContent();
     return;
   }
@@ -879,116 +800,72 @@ async function ejecutarGeneracion(){
   renderContent();
 
   const prompt = buildPrompt(fileText, state.descripcion);
-  
+  const sysMsg = "Eres un especialista en diseño curricular de la UPNFM. Debes estructurar guías metodológicas completas.";
+
   try {
-    let rawText = '';
-    const { provider, apiKey, model, baseUrl } = state.config;
-
-    if(provider === 'anthropic'){
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey.trim(),
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true"
-        },
-        body: JSON.stringify({
-          model: model.trim() || "claude-3-5-sonnet-20241022",
-          max_tokens: 8000,
-          messages: [{ role: "user", content: prompt }]
-        })
-      });
-      if(!resp.ok){
-        const e = await resp.json().catch(()=>({}));
-        throw new Error(e.error?.message || `Error HTTP ${resp.status}`);
-      }
-      const data = await resp.json();
-      rawText = data.content[0].text;
-    } 
-    else if(provider === 'openai' || provider === 'compatible'){
-      const endpoint = provider === 'openai' ? "https://api.openai.com/v1/chat/completions" : `${baseUrl.replace(/\/$/, '')}/chat/completions`;
-      const resp = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey.trim()}`
-        },
-        body: JSON.stringify({
-          model: model.trim() || "gpt-4o",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.4
-        })
-      });
-      if(!resp.ok){
-        const e = await resp.json().catch(()=>({}));
-        throw new Error(e.error?.message || `Error HTTP ${resp.status}`);
-      }
-      const data = await resp.json();
-      rawText = data.choices[0].message.content;
+    let modeloStr = state.config.model.trim() || 'gemini-1.5-flash';
+    modeloStr = modeloStr.replace('models/', '');
+    
+    // Llamada exclusiva y estructurada para Gemini
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modeloStr)}:generateContent?key=${state.config.apiKey.trim()}`;
+    
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: sysMsg }] },
+        contents: [{ 
+          role: "user",
+          parts: [{ text: prompt }] 
+        }],
+        generationConfig: { 
+          temperature: 0.4,
+          maxOutputTokens: 8192,
+          responseMimeType: "application/json" // Fuerza respuesta JSON limpia
+        }
+      })
+    });
+    
+    if(!resp.ok){
+      const e = await resp.json().catch(()=>({}));
+      throw new Error(e.error?.message || `Error HTTP ${resp.status} de Gemini`);
     }
-    // CORRECCIÓN EXACTA PARA GEMINI
-    else if(provider === 'gemini'){
-      const modeloStr = model.trim() || 'gemini-1.5-flash';
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modeloStr}:generateContent?key=${apiKey.trim()}`;
-      
-      const resp = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: "Eres un especialista en diseño curricular. Responde SOLO en JSON." }] },
-          contents: [{ 
-            role: "user",
-            parts: [{ text: prompt }] 
-          }],
-          generationConfig: { 
-            temperature: 0.4,
-            maxOutputTokens: 8192,
-            responseMimeType: "application/json"
-          }
-        })
-      });
-      if(!resp.ok){
-        const e = await resp.json().catch(()=>({}));
-        throw new Error(e.error?.message || `Error HTTP ${resp.status}`);
-      }
-      const data = await resp.json();
-      rawText = data.candidates[0].content.parts[0].text;
-    }
+    const data = await resp.json();
+    const rawText = data.candidates[0].content.parts[0].text;
 
-    state.generated = tryParseJson(rawText);
+    state.generated = JSON.parse(rawText); // Parseo directo porque responseMimeType garantiza JSON
     state.step = 4;
   } catch(err) {
     state.error = `Fallo en la generación con IA: ${err.message}`;
   } finally {
     state.loading = false;
-    renderSteps();
+    renderStepsNav();
     renderContent();
   }
 }
 
 function buildPrompt(fileText, desc){
   return `Actúa como especialista en diseño curricular de la Universidad Pedagógica Nacional Francisco Morazán (UPNFM).
-Redacta la GUÍA METODOLÓGICA formal para este espacio formativo.
+Redacta la GUÍA METODOLÓGICA formal para este espacio formativo basándote en la siguiente información.
 
-DATOS:
+DATOS INSTITUCIONALES:
 - Facultad: ${getFacultadFinal()}
 - Departamento: ${getDeptoFinal()}
 - Espacio Pedagógico: ${state.espacio.nombreEspacio} (${state.espacio.codigo})
 - Modalidad: ${state.espacio.modalidad}
 - Docente: ${state.docente.nombre}
 
-${fileText ? `CONTENIDO EXTRAÍDO (ÚSALO COMO BASE ESTRICTA):\n"""\n${fileText}\n"""\n` : ''}
-${desc ? `INDICACIONES:\n"""\n${desc}\n"""\n` : ''}
+${fileText ? `CONTENIDO EXTRAÍDO (USAR COMO BASE ESTRICTA):\n"""\n${fileText}\n"""\n` : ''}
+${desc ? `INDICACIONES ADICIONALES:\n"""\n${desc}\n"""\n` : ''}
 
-Responde ÚNICAMENTE con un JSON válido. NUNCA respondas con markdown. El JSON debe cumplir este esquema estricto:
+El objeto JSON que devuelvas DEBE cumplir exactamente este esquema y claves:
 {
   "descripcion_espacio": "Descripción ampliada (párrafo)",
   "saberes_previos": "Saberes y experiencias previas",
   "competencias_genericas": "Competencias a desarrollar",
   "subcompetencias": "Sub1\\nSub2\\nSub3",
   "contenidos": "Unidad 1\\n- Tema A\\n- Tema B",
-  "metodologia_trabajo": "Metodología de trabajo...",
+  "metodologia_trabajo": "Metodología de trabajo en clase...",
   "metodologia_evaluacion": "Metodología de evaluación...",
   "documentos_materiales": "Doc 1\\nDoc 2",
   "planificacion_semanal": [
@@ -1001,28 +878,6 @@ Responde ÚNICAMENTE con un JSON válido. NUNCA respondas con markdown. El JSON 
     {"actividad":"Foro", "porcentaje":"20%", "criterios":"Rúbrica"}
   ]
 }`;
-}
-
-// Saneamiento y Parseo JSON
-function tryParseJson(raw){
-  let t = raw.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
-  const first = t.indexOf('{');
-  const last = t.lastIndexOf('}');
-  if(first !== -1 && last !== -1) t = t.slice(first, last + 1);
-
-  // Saneamiento de saltos de línea crudos dentro de strings JSON
-  let sanitized = '';
-  let inString = false;
-  for(let i=0; i<t.length; i++){
-    const c = t[i];
-    if(c === '"' && (i===0 || t[i-1] !== '\\')) inString = !inString;
-    if(inString && c === '\n') sanitized += '\\n';
-    else if(inString && c === '\r') {} 
-    else if(inString && c === '\t') sanitized += '\\t';
-    else sanitized += c;
-  }
-
-  return JSON.parse(sanitized);
 }
 
 // --- PASO 4: Vista y Descargas ---
@@ -1063,13 +918,13 @@ function renderStep4(container){
   card.innerHTML = `
     <h2>Paso 4: <span>Guía Metodológica Generada</span></h2>
     <div class="export-bar no-print">
-      <button class="btn-secondary" onclick="state.step=3; renderSteps(); renderContent();">← Modificar Insumos</button>
+      <button class="btn-secondary" onclick="state.step=3; renderStepsNav(); renderContent();">← Modificar Insumos</button>
+      <button class="btn-outline" onclick="dispararGeneracionIA()">↻ Regenerar con IA</button>
       <button class="btn-gold" onclick="exportToDoc()">📄 Descargar en Word (.doc)</button>
       <button class="btn-primary" onclick="exportToPdf(this)">🖨️ Exportar a PDF</button>
     </div>
 
     <div class="doc-wrap">
-      <!-- Sección Retrato -->
       <div id="docPortraitSection">
         <div class="doc-header">
           <h2>UNIVERSIDAD PEDAGÓGICA NACIONAL FRANCISCO MORAZÁN</h2>
@@ -1108,7 +963,6 @@ function renderStep4(container){
         </div>
       </div>
 
-      <!-- Sección Paisaje (Tablas) -->
       <div id="docLandscapeSection" class="doc-body page-break" style="padding-top:0;">
         <div class="doc-section">
           <h4>I. PLANIFICACIÓN SEMANAL</h4><div class="accent-bar"></div>
@@ -1136,7 +990,7 @@ function exportToDoc(){
   const cleanName = (state.espacio.nombreEspacio || 'Guia').replace(/[^a-zA-Z0-9áéíóúñÑ]+/g, '_');
 
   const fullWordHTML = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='[http://www.w3.org/TR/REC-html40](http://www.w3.org/TR/REC-html40)'>
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head><meta charset='utf-8'><title>Guía Metodológica UPNFM</title>
       <style>
         @page Section1 { size:8.5in 11.0in; margin:0.5in; mso-page-orientation:portrait; }
