@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generador de Guía Metodológica Multi-IA</title>
+<title>Generador de Guía Metodológica</title>
 <style>
   :root{
     --azul-principal:#02244F;
@@ -13,7 +13,6 @@
     --blanco:#FFFFFF;
     --gris-suave:#F4F6F9;
     --texto:#1B2530;
-    --borde:#E2E8F0;
   }
   *{box-sizing:border-box;}
   body{
@@ -23,7 +22,7 @@
     color:var(--texto);
   }
   .app{
-    max-width:980px;
+    max-width:960px;
     margin:0 auto;
     padding:24px 20px 60px;
   }
@@ -37,287 +36,390 @@
     justify-content:space-between;
     gap:16px;
     box-shadow:0 6px 18px rgba(2,36,79,0.25);
-    flex-wrap:wrap;
   }
   .topbar h1{
-    margin:0 0 4px 0;
-    font-size:22px;
-    font-weight:700;
+    margin:0;
+    font-size:20px;
+    letter-spacing:.2px;
   }
   .topbar p{
-    margin:0;
+    margin:4px 0 0;
     font-size:13px;
-    opacity:0.85;
+    color:#CFE0F5;
   }
-  .api-status{
-    background:rgba(255,255,255,0.12);
-    padding:8px 14px;
-    border-radius:8px;
+  .badge{
+    background:var(--dorado);
+    color:var(--azul-principal);
+    font-weight:700;
     font-size:12px;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    cursor:pointer;
-    border:1px solid rgba(255,255,255,0.2);
-    transition:background 0.2s;
+    padding:6px 12px;
+    border-radius:999px;
+    white-space:nowrap;
   }
-  .api-status:hover{
-    background:rgba(255,255,255,0.2);
-  }
-  .dot{
-    width:9px;
-    height:9px;
-    border-radius:50%;
-    background:#e0e0e0;
-  }
-  .dot.ok{background:#2ECC71;}
-  .steps-nav{
+
+  .steps{
     display:flex;
     gap:8px;
-    margin:22px 0 16px;
-    background:var(--blanco);
-    padding:10px 14px;
-    border-radius:12px;
-    box-shadow:0 2px 6px rgba(0,0,0,0.04);
-    overflow-x:auto;
+    margin:22px 0;
   }
-  .step-tab{
+  .step-dot{
     flex:1;
-    min-width:120px;
     text-align:center;
-    padding:10px 8px;
-    border-radius:8px;
-    font-size:13px;
+    padding:10px 6px;
+    border-radius:10px;
+    background:var(--blanco);
+    border:2px solid #E1E6EE;
+    font-size:12px;
     font-weight:600;
-    color:#667085;
-    background:#F8F9FA;
+    color:#8B96A5;
     cursor:pointer;
-    border:1px solid transparent;
-    transition:all 0.2s;
+    transition:all .2s ease;
   }
-  .step-tab.active{
-    background:var(--azul-principal);
-    color:var(--blanco);
+  .step-dot.active{
+    border-color:var(--azul-secundario);
+    color:var(--azul-principal);
+    background:#EAF1FB;
   }
-  .step-tab.done{
-    background:rgba(14,64,139,0.08);
-    color:var(--azul-secundario);
-    border-color:rgba(14,64,139,0.2);
+  .step-dot.done{
+    border-color:var(--dorado);
+    color:var(--azul-principal);
+    background:#FFF6E4;
   }
+
   .card{
     background:var(--blanco);
     border-radius:14px;
-    padding:24px 28px;
-    margin-bottom:18px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.05);
+    padding:28px;
+    box-shadow:0 2px 12px rgba(2,36,79,0.08);
+    border-top:5px solid var(--naranja);
   }
   .card h2{
     margin-top:0;
     color:var(--azul-principal);
-    font-size:18px;
-    border-bottom:2px solid var(--gris-suave);
-    padding-bottom:10px;
+    font-size:19px;
+    border-bottom:2px solid #EEF1F5;
+    padding-bottom:12px;
   }
-  .form-group{
-    margin-bottom:14px;
+  .card h2 span{
+    color:var(--naranja);
   }
-  .form-row{
+  .grid2{
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:16px;
   }
-  @media(max-width:680px){
-    .form-row{grid-template-columns:1fr;}
+  @media(max-width:640px){
+    .grid2{grid-template-columns:1fr;}
+    .topbar{flex-direction:column;align-items:flex-start;}
   }
   label{
     display:block;
     font-size:13px;
     font-weight:600;
+    color:var(--azul-principal);
     margin-bottom:6px;
-    color:#344054;
+    margin-top:14px;
   }
-  input[type="text"], input[type="password"], textarea, select{
+  input[type=text], input[type=password], input[type=email], textarea, select{
     width:100%;
     padding:10px 12px;
-    border:1px solid #D0D5DD;
+    border:1.5px solid #D8DEE7;
     border-radius:8px;
     font-size:14px;
     font-family:inherit;
-    background:#FAFAFA;
-    transition:border 0.15s, background 0.15s;
+    color:var(--texto);
+    background:var(--blanco);
+    transition:border-color .15s ease;
   }
   input:focus, textarea:focus, select:focus{
     outline:none;
     border-color:var(--azul-secundario);
-    background:var(--blanco);
-    box-shadow:0 0 0 3px rgba(14,64,139,0.1);
+    box-shadow:0 0 0 3px rgba(14,64,139,0.12);
   }
-  .btn{
-    background:var(--azul-principal);
-    color:var(--blanco);
-    border:none;
-    padding:11px 20px;
+  textarea{resize:vertical; min-height:100px;}
+  .hint{
+    font-size:12px;
+    color:#7A8697;
+    margin-top:4px;
+  }
+  .required::after{
+    content:" *";
+    color:var(--naranja);
+  }
+
+  .nav-row{
+    display:flex;
+    justify-content:space-between;
+    margin-top:26px;
+    gap:12px;
+  }
+  button{
+    font-family:inherit;
     font-size:14px;
-    font-weight:600;
-    border-radius:8px;
+    font-weight:700;
+    border:none;
+    border-radius:9px;
+    padding:12px 22px;
     cursor:pointer;
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    transition:background 0.2s, transform 0.1s;
+    transition:transform .1s ease, box-shadow .15s ease, opacity .15s ease;
   }
-  .btn:hover{background:var(--azul-secundario);}
-  .btn:active{transform:scale(0.98);}
-  .btn-accent{
+  button:active{transform:scale(0.98);}
+  button:disabled{opacity:.55; cursor:not-allowed;}
+  .btn-primary{
     background:var(--naranja);
+    color:var(--blanco);
+    box-shadow:0 4px 10px rgba(240,90,18,0.3);
   }
-  .btn-accent:hover{background:#d84a08;}
+  .btn-primary:hover:not(:disabled){box-shadow:0 6px 14px rgba(240,90,18,0.4);}
+  .btn-secondary{
+    background:var(--blanco);
+    color:var(--azul-secundario);
+    border:1.5px solid var(--azul-secundario);
+  }
+  .btn-gold{
+    background:var(--dorado);
+    color:var(--azul-principal);
+  }
   .btn-outline{
     background:transparent;
-    color:var(--azul-principal);
-    border:1px solid var(--azul-principal);
+    border:1.5px solid #D8DEE7;
+    color:var(--texto);
   }
-  .btn-outline:hover{
-    background:rgba(2,36,79,0.05);
-  }
-  .btn:disabled{
-    opacity:0.5;
-    cursor:not-allowed;
-  }
-  .acciones{
-    display:flex;
-    justify-content:space-between;
-    margin-top:24px;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-  .table-resumen{
-    width:100%;
-    border-collapse:collapse;
-    margin:14px 0;
-    font-size:13px;
-  }
-  .table-resumen th, .table-resumen td{
-    border:1px solid #E4E7EC;
-    padding:10px 12px;
-    text-align:left;
-  }
-  .table-resumen th{
-    background:#F8F9FA;
-    font-weight:600;
-    color:var(--azul-principal);
+
+  .loading-wrap{
+    text-align:center;
+    padding:60px 20px;
   }
   .spinner{
-    width:22px;
-    height:22px;
-    border:3px solid rgba(2,36,79,0.2);
-    border-top-color:var(--azul-principal);
+    width:52px;height:52px;
+    margin:0 auto 20px;
+    border:5px solid #E1E6EE;
+    border-top-color:var(--naranja);
     border-radius:50%;
-    animation:spin 0.8s linear infinite;
-    display:inline-block;
+    animation:spin 0.9s linear infinite;
   }
   @keyframes spin{to{transform:rotate(360deg);}}
-  .badge{
-    background:rgba(240,90,18,0.12);
-    color:var(--naranja);
-    font-size:11px;
-    padding:3px 8px;
-    border-radius:6px;
+  .loading-msg{
+    color:var(--azul-principal);
     font-weight:600;
+    font-size:14.5px;
   }
-  .preview-box{
-    border:1px solid #E2E8F0;
-    border-radius:10px;
-    padding:18px;
-    margin-top:14px;
-    background:#FAFAFA;
-    max-height:480px;
-    overflow-y:auto;
+
+  .error-box{
+    background:#FDEDEA;
+    border:1.5px solid var(--naranja);
+    color:#8A2E0C;
+    padding:14px 16px;
+    border-radius:9px;
+    font-size:13.5px;
+    margin-top:16px;
   }
-  .card-sesion{
-    border:1px solid #E4E7EC;
+
+  .upload-box{
+    border:1.5px dashed #B9C4D4;
     border-radius:10px;
     padding:16px;
-    margin-bottom:14px;
-    background:#FFFFFF;
+    margin-top:8px;
+    background:#FAFBFD;
   }
-  .card-sesion h3{
-    margin-top:0;
+  .upload-box input[type=file]{
+    font-size:13px;
+  }
+  .upload-status{
+    margin-top:12px;
+    font-size:13px;
+  }
+  .upload-status.ready{
+    background:#EAF7EE;
+    border:1px solid #8FCB9E;
+    color:#1E6B34;
+    padding:10px 12px;
+    border-radius:8px;
+  }
+  .upload-status.loading{
     color:var(--azul-secundario);
-    font-size:15px;
-    display:flex;
-    justify-content:space-between;
+    font-weight:600;
   }
-  /* Estilos específicos de impresión / exportación */
-  .doc-preview-table{
+  .upload-preview{
+    margin-top:8px;
+    font-size:12px;
+    color:#5B6B80;
+    background:var(--blanco);
+    border:1px solid #E1E6EE;
+    border-radius:6px;
+    padding:8px 10px;
+    max-height:110px;
+    overflow:auto;
+    white-space:pre-wrap;
+  }
+  .divider-or{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:20px 0 4px;
+    color:#9AA6B5;
+    font-size:12px;
+    font-weight:700;
+  }
+  .divider-or::before, .divider-or::after{
+    content:'';
+    flex:1;
+    height:1px;
+    background:#E1E6EE;
+  }
+
+  /* Preview / documento generado */
+  .doc-wrap{
+    background:var(--blanco);
+    border-radius:14px;
+    box-shadow:0 2px 12px rgba(2,36,79,0.08);
+    overflow:hidden;
+  }
+  .doc-header{
+    background:var(--azul-principal);
+    color:var(--blanco);
+    padding:26px 30px;
+    text-align:center;
+  }
+  .doc-header h2{
+    margin:0 0 4px;
+    font-size:16px;
+    letter-spacing:.3px;
+  }
+  .doc-header h3{
+    margin:2px 0;
+    font-size:12.5px;
+    font-weight:500;
+    color:#CFE0F5;
+  }
+  .doc-header .titulo-guia{
+    margin-top:14px;
+    font-size:20px;
+    font-weight:800;
+    color:var(--dorado);
+    letter-spacing:.5px;
+  }
+  .doc-body{padding:26px 30px 36px;}
+  .doc-section{margin-top:30px;}
+  .doc-section h4{
+    color:var(--blanco);
+    background:var(--azul-secundario);
+    display:inline-block;
+    padding:6px 14px;
+    border-radius:6px;
+    font-size:13.5px;
+    margin:0 0 12px;
+  }
+  .doc-section .accent-bar{
+    height:3px;
+    width:46px;
+    background:var(--naranja);
+    border-radius:3px;
+    margin-bottom:14px;
+  }
+  .doc-section p{
+    font-size:13.8px;
+    line-height:1.65;
+    color:#2B384A;
+    white-space:pre-wrap;
+  }
+  .doc-list{
+    margin:6px 0 0 22px;
+    padding:0;
+    font-size:13.8px;
+    line-height:1.65;
+    color:#2B384A;
+  }
+  .doc-list li{
+    margin-bottom:6px;
+  }
+  table.doc-table{
     width:100%;
     border-collapse:collapse;
-    margin-top:10px;
-    font-size:12px;
+    margin-top:6px;
+    font-size:12.8px;
   }
-  .doc-preview-table th, .doc-preview-table td{
-    border:1px solid #333;
-    padding:6px 8px;
+  table.doc-table th{
+    background:var(--azul-secundario);
+    color:var(--blanco);
+    padding:9px 10px;
+    text-align:left;
+    border:1px solid var(--azul-principal);
+  }
+  table.doc-table td{
+    padding:9px 10px;
+    border:1px solid #E1E6EE;
     vertical-align:top;
+    color:#2B384A;
   }
-  .doc-preview-table th{
-    background:#02244F;
-    color:#FFF;
+  table.doc-table tr:nth-child(even) td{background:#F3F7FC;}
+  table.identif td{
+    border:1px solid #E1E6EE;
+    padding:8px 10px;
+  }
+  table.identif td.label{
+    background:#EAF1FB;
+    font-weight:700;
+    color:var(--azul-principal);
+    width:34%;
+  }
+  .pill{
+    display:inline-block;
+    background:var(--dorado);
+    color:var(--azul-principal);
+    font-weight:700;
+    font-size:11px;
+    padding:3px 10px;
+    border-radius:999px;
+    margin-bottom:8px;
+  }
+  .doc-footer{
+    text-align:center;
+    padding:18px;
+    font-size:11.5px;
+    color:#8B96A5;
+    border-top:1px solid #EEF1F5;
+  }
+
+  .export-bar{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin:18px 0 0;
+  }
+
+  @media print{
+    body{background:#fff;}
+    .app{max-width:100%;padding:0;}
+    .topbar, .steps, .export-bar, .no-print{display:none !important;}
+    .doc-wrap{box-shadow:none;}
   }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- Bibliotecas CDN oficiales para lectura de DOCX y extracción PDF sin romper el DOM -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
 </head>
 <body>
-
 <div class="app">
-  <header class="topbar">
+
+  <div class="topbar">
     <div>
       <h1>Generador de Guía Metodológica</h1>
-      <p>Planificación instruccional modular con soporte Multi-IA</p>
+      <p>UPNFM · Programa de Educación Virtual</p>
     </div>
-    <div class="api-status" onclick="abrirConfigIA()">
-      <div class="dot" id="apiDot"></div>
-      <span id="apiStatusText">Configurar IA</span>
-      <span class="badge" id="modelBadge">Multi-IA</span>
-    </div>
-  </header>
-
-  <nav class="steps-nav" id="stepsNav"></nav>
-
-  <main id="content"></main>
-</div>
-
-<div id="modalConfigIA" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:9999;">
-  <div style="background:#FFF; border-radius:14px; padding:24px 28px; width:90%; max-width:480px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
-    <h3 style="margin-top:0; color:var(--azul-principal);">Configuración del Proveedor de IA</h3>
-    <div class="form-group">
-      <label>Proveedor</label>
-      <select id="cfgProvider" onchange="actualizarCamposProveedor()">
-        <option value="anthropic">Anthropic (Claude)</option>
-        <option value="openai">OpenAI (ChatGPT)</option>
-        <option value="gemini">Google Gemini</option>
-        <option value="compatible">OpenAI Compatible (DeepSeek, Groq, OpenRouter...)</option>
-      </select>
-    </div>
-    <div class="form-group" id="cfgBaseUrlGroup" style="display:none;">
-      <label>Base URL de la API</label>
-      <input type="text" id="cfgBaseUrl" placeholder="https://api.deepseek.com/v1">
-    </div>
-    <div class="form-group">
-      <label>Modelo</label>
-      <input type="text" id="cfgModel" placeholder="claude-3-5-sonnet-20241022">
-      <div style="font-size:11px; color:#667085; margin-top:4px;" id="cfgModelHint">Ejemplos: claude-3-5-sonnet-20241022, claude-3-haiku-20240307</div>
-    </div>
-    <div class="form-group">
-      <label>API Key</label>
-      <input type="password" id="cfgApiKey" placeholder="Introduce tu API Key">
-    </div>
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-      <button class="btn btn-outline" onclick="cerrarConfigIA()">Cerrar</button>
-      <button class="btn btn-accent" onclick="guardarConfigIA()">Guardar Configuración</button>
-    </div>
+    <div class="badge" id="stepBadge">Paso 1 de 4</div>
   </div>
+
+  <div class="steps no-print" id="stepsNav"></div>
+
+  <div id="content"></div>
+
 </div>
 
 <script>
@@ -325,121 +427,398 @@
 const state = {
   step: 1,
   loading: false,
-  loadingMessage: '',
-  configIA: {
-    provider: localStorage.getItem('gm_ia_provider') || 'anthropic',
-    apiKey: localStorage.getItem('gm_ia_key') || '',
-    model: localStorage.getItem('gm_ia_model') || 'claude-3-5-sonnet-20241022',
-    baseUrl: localStorage.getItem('gm_ia_baseurl') || 'https://api.deepseek.com/v1'
+  loadingMsg: '',
+  error: null,
+  config: {
+    provider: localStorage.getItem('gm_provider') || 'anthropic',
+    apiKey: localStorage.getItem('gm_apiKey') || '',
+    model: localStorage.getItem('gm_model') || 'claude-3-5-sonnet-20241022',
+    baseUrl: localStorage.getItem('gm_baseUrl') || 'https://api.openai.com/v1'
   },
-  espacio: {
-    nombreEspacio: '',
-    objetivoGeneral: '',
-    publicoMeta: '',
-    duracionHoras: 12,
-    cantidadModulos: 3,
-    metodologia: 'Taller participativo y práctico'
+  doc: {
+    asignatura: '',
+    codigo: '',
+    periodo: '',
+    facultad: 'Facultad de Ciencia y Tecnología',
+    departamento: 'Educación Técnico Industrial',
+    modalidad: 'Virtual',
+    creditos: '3',
+    docente: '',
+    emailDocente: '',
+    presentacion: '',
+    competencias: '',
+    metodologia: '',
+    evaluacion: '',
+    semanas: 14,
+    textoAnalizado: '',
+    archivoNombre: ''
   },
-  modulos: [], // { id, titulo, objetivo, sesiones: [] }
   guiaGenerada: null
 };
 
-// Pasos de Navegación
-const steps = [
-  { id: 1, label: '1. Datos Generales' },
-  { id: 2, label: '2. Módulos y Temas' },
-  { id: 3, label: '3. Generación de Guiones' },
-  { id: 4, label: '4. Descarga y Exportación' }
+const stepsNames = [
+  '1. Configuración e IA',
+  '2. Datos de Asignatura',
+  '3. Sílabo y Planificación',
+  '4. Guía Metodológica'
 ];
 
 function init(){
-  actualizarEstadoConexion();
-  renderStepsNav();
-  render();
+  renderSteps();
+  renderContent();
 }
 
-function actualizarEstadoConexion(){
-  const dot = document.getElementById('apiDot');
-  const txt = document.getElementById('apiStatusText');
-  const badge = document.getElementById('modelBadge');
+function renderSteps(){
+  const nav = document.getElementById('stepsNav');
+  const badge = document.getElementById('stepBadge');
+  badge.textContent = `Paso ${state.step} de 4`;
+  nav.innerHTML = '';
   
-  if(state.configIA.apiKey){
-    dot.className = 'dot ok';
-    txt.textContent = 'IA Conectada (' + state.configIA.provider.toUpperCase() + ')';
-    badge.textContent = state.configIA.model;
-  } else {
-    dot.className = 'dot';
-    txt.textContent = 'Configurar API Key';
-    badge.textContent = 'Sin clave';
+  stepsNames.forEach((name, idx) => {
+    const num = idx + 1;
+    const dot = document.createElement('div');
+    dot.className = `step-dot ${state.step === num ? 'active' : ''} ${state.step > num ? 'done' : ''}`;
+    dot.textContent = name;
+    dot.onclick = () => {
+      if(state.loading) return;
+      if(num < state.step || validarPasoActual(state.step)){
+        state.step = num;
+        state.error = null;
+        renderSteps();
+        renderContent();
+      }
+    };
+    nav.appendChild(dot);
+  });
+}
+
+function validarPasoActual(step){
+  if(step === 1){
+    return !!state.config.apiKey;
+  }
+  if(step === 2){
+    return !!state.doc.asignatura;
+  }
+  return true;
+}
+
+function renderContent(){
+  const container = document.getElementById('content');
+  container.innerHTML = '';
+
+  if(state.loading){
+    container.innerHTML = `
+      <div class="card">
+        <div class="loading-wrap">
+          <div class="spinner"></div>
+          <div class="loading-msg">${state.loadingMsg || 'Generando información pedagógica...'}</div>
+          <p class="hint" style="margin-top:10px;">El modelo seleccionado (${state.config.model}) está procesando el guion instruccional.</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(state.error){
+    const errBox = document.createElement('div');
+    errBox.className = 'error-box';
+    errBox.innerHTML = `<strong>Error:</strong> ${state.error}`;
+    container.appendChild(errBox);
+  }
+
+  if(state.step === 1) renderStep1(container);
+  else if(state.step === 2) renderStep2(container);
+  else if(state.step === 3) renderStep3(container);
+  else if(state.step === 4) renderStep4(container);
+}
+
+// Paso 1: Configuración Universal de IA
+function renderStep1(container){
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <h2>Paso 1: Configuración de la <span>Inteligencia Artificial</span></h2>
+    <p class="hint">Selecciona tu proveedor preferido e ingresa la API Key correspondiente. Los datos se almacenan de forma local en tu navegador.</p>
+    
+    <label class="required">Proveedor de IA</label>
+    <select id="selProvider" onchange="cambiarProveedor(this.value)">
+      <option value="anthropic" ${state.config.provider === 'anthropic' ? 'selected' : ''}>Anthropic (Claude)</option>
+      <option value="openai" ${state.config.provider === 'openai' ? 'selected' : ''}>OpenAI (ChatGPT)</option>
+      <option value="gemini" ${state.config.provider === 'gemini' ? 'selected' : ''}>Google Gemini</option>
+      <option value="compatible" ${state.config.provider === 'compatible' ? 'selected' : ''}>Compatible OpenAI (DeepSeek, Groq, OpenRouter, LocalAI)</option>
+    </select>
+
+    <div id="boxBaseUrl" style="display: ${state.config.provider === 'compatible' ? 'block' : 'none'};">
+      <label class="required">Base URL del Proveedor</label>
+      <input type="text" id="txtBaseUrl" value="${state.config.baseUrl}" placeholder="Ej: https://api.deepseek.com/v1">
+      <div class="hint">Endpoint compatible con /chat/completions</div>
+    </div>
+
+    <label class="required">Modelo de IA</label>
+    <input type="text" id="txtModel" value="${state.config.model}" placeholder="Modelo">
+    <div class="hint" id="lblModelHint">Sugerencias: claude-3-5-sonnet-20241022, claude-3-haiku-20240307</div>
+
+    <label class="required">API Key</label>
+    <input type="password" id="txtApiKey" value="${state.config.apiKey}" placeholder="sk-...">
+    <div class="hint">Tu clave permanece segura en tu sesión local.</div>
+
+    <div class="nav-row">
+      <div></div>
+      <button class="btn-primary" onclick="guardarPaso1()">Continuar a Datos de Asignatura →</button>
+    </div>
+  `;
+  container.appendChild(card);
+}
+
+function cambiarProveedor(prov){
+  state.config.provider = prov;
+  const baseUrlBox = document.getElementById('boxBaseUrl');
+  const txtModel = document.getElementById('txtModel');
+  const lblHint = document.getElementById('lblModelHint');
+
+  if(prov === 'anthropic'){
+    baseUrlBox.style.display = 'none';
+    txtModel.value = 'claude-3-5-sonnet-20241022';
+    lblHint.textContent = 'Sugerencias: claude-3-5-sonnet-20241022, claude-3-haiku-20240307';
+  } else if(prov === 'openai'){
+    baseUrlBox.style.display = 'none';
+    txtModel.value = 'gpt-4o';
+    lblHint.textContent = 'Sugerencias: gpt-4o, gpt-4o-mini';
+  } else if(prov === 'gemini'){
+    baseUrlBox.style.display = 'none';
+    txtModel.value = 'gemini-1.5-pro';
+    lblHint.textContent = 'Sugerencias: gemini-1.5-pro, gemini-1.5-flash';
+  } else if(prov === 'compatible'){
+    baseUrlBox.style.display = 'block';
+    txtModel.value = 'deepseek-chat';
+    lblHint.textContent = 'Sugerencias: deepseek-chat, llama-3.1-70b-versatile, mistral-large';
   }
 }
 
-function abrirConfigIA(){
-  document.getElementById('cfgProvider').value = state.configIA.provider;
-  document.getElementById('cfgApiKey').value = state.configIA.apiKey;
-  document.getElementById('cfgModel').value = state.configIA.model;
-  document.getElementById('cfgBaseUrl').value = state.configIA.baseUrl;
-  actualizarCamposProveedor();
-  document.getElementById('modalConfigIA').style.display = 'flex';
+function guardarPaso1(){
+  const apiKey = document.getElementById('txtApiKey').value.trim();
+  const model = document.getElementById('txtModel').value.trim();
+  const provider = document.getElementById('selProvider').value;
+  const baseUrl = document.getElementById('txtBaseUrl') ? document.getElementById('txtBaseUrl').value.trim() : '';
+
+  if(!apiKey){
+    state.error = 'Por favor ingresa la API Key para continuar.';
+    renderContent();
+    return;
+  }
+
+  state.config.provider = provider;
+  state.config.apiKey = apiKey;
+  state.config.model = model;
+  state.config.baseUrl = baseUrl;
+
+  localStorage.setItem('gm_provider', provider);
+  localStorage.setItem('gm_apiKey', apiKey);
+  localStorage.setItem('gm_model', model);
+  localStorage.setItem('gm_baseUrl', baseUrl);
+
+  state.error = null;
+  state.step = 2;
+  renderSteps();
+  renderContent();
 }
 
-function cerrarConfigIA(){
-  document.getElementById('modalConfigIA').style.display = 'none';
+// Paso 2: Datos de Asignatura
+function renderStep2(container){
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <h2>Paso 2: Datos Generales del <span>Espacio Pedagógico</span></h2>
+    
+    <div class="grid2">
+      <div>
+        <label class="required">Nombre del Espacio / Asignatura</label>
+        <input type="text" id="fAsignatura" value="${state.doc.asignatura}" placeholder="Ej: Metodología de la Investigación Educativa">
+      </div>
+      <div>
+        <label>Código de Asignatura</label>
+        <input type="text" id="fCodigo" value="${state.doc.codigo}" placeholder="Ej: FPM-101">
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Período Académico</label>
+        <input type="text" id="fPeriodo" value="${state.doc.periodo}" placeholder="Ej: II Período 2026">
+      </div>
+      <div>
+        <label>Modalidad de Entrega</label>
+        <select id="fModalidad">
+          <option value="Virtual" ${state.doc.modalidad === 'Virtual' ? 'selected' : ''}>Virtual</option>
+          <option value="Híbrida / B-Learning" ${state.doc.modalidad === 'Híbrida / B-Learning' ? 'selected' : ''}>Híbrida / B-Learning</option>
+          <option value="A Distancia" ${state.doc.modalidad === 'A Distancia' ? 'selected' : ''}>A Distancia</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Facultad</label>
+        <input type="text" id="fFacultad" value="${state.doc.facultad}">
+      </div>
+      <div>
+        <label>Departamento Académico</label>
+        <input type="text" id="fDepartamento" value="${state.doc.departamento}">
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Nombre del Docente / Diseñador</label>
+        <input type="text" id="fDocente" value="${state.doc.docente}" placeholder="Ej: Máster Juan Pérez">
+      </div>
+      <div>
+        <label>Correo Electrónico Institucional</label>
+        <input type="email" id="fEmail" value="${state.doc.emailDocente}" placeholder="ejemplo@upnfm.edu.hn">
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Unidades Valorativas / Créditos</label>
+        <input type="text" id="fCreditos" value="${state.doc.creditos}">
+      </div>
+      <div>
+        <label>Duración en Semanas</label>
+        <input type="text" id="fSemanas" value="${state.doc.semanas}">
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn-secondary" onclick="state.step=1; renderSteps(); renderContent();">← Paso Anterior</button>
+      <button class="btn-primary" onclick="guardarPaso2()">Continuar a Sílabo / Insumos →</button>
+    </div>
+  `;
+  container.appendChild(card);
 }
 
-function actualizarCamposProveedor(){
-  const prov = document.getElementById('cfgProvider').value;
-  const baseUrlGroup = document.getElementById('cfgBaseUrlGroup');
-  const modelInput = document.getElementById('cfgModel');
-  const hint = document.getElementById('cfgModelHint');
+function guardarPaso2(){
+  const asig = document.getElementById('fAsignatura').value.trim();
+  if(!asig){
+    state.error = 'El nombre del espacio pedagógico es obligatorio.';
+    renderContent();
+    return;
+  }
+  state.doc.asignatura = asig;
+  state.doc.codigo = document.getElementById('fCodigo').value.trim();
+  state.doc.periodo = document.getElementById('fPeriodo').value.trim();
+  state.doc.modalidad = document.getElementById('fModalidad').value;
+  state.doc.facultad = document.getElementById('fFacultad').value.trim();
+  state.doc.departamento = document.getElementById('fDepartamento').value.trim();
+  state.doc.docente = document.getElementById('fDocente').value.trim();
+  state.doc.emailDocente = document.getElementById('fEmail').value.trim();
+  state.doc.creditos = document.getElementById('fCreditos').value.trim();
+  state.doc.semanas = document.getElementById('fSemanas').value.trim();
 
-  if(prov === 'compatible'){
-    baseUrlGroup.style.display = 'block';
-    hint.textContent = 'Ejemplos: deepseek-chat, llama-3.1-70b-versatile';
-    if(!modelInput.value || modelInput.value.includes('claude') || modelInput.value.includes('gpt')) modelInput.value = 'deepseek-chat';
-  } else {
-    baseUrlGroup.style.display = 'none';
-    if(prov === 'anthropic'){
-      hint.textContent = 'claude-3-5-sonnet-20241022, claude-3-haiku-20240307';
-      if(!modelInput.value.includes('claude')) modelInput.value = 'claude-3-5-sonnet-20241022';
-    } else if(prov === 'openai'){
-      hint.textContent = 'gpt-4o, gpt-4o-mini';
-      if(!modelInput.value.includes('gpt')) modelInput.value = 'gpt-4o';
-    } else if(prov === 'gemini'){
-      hint.textContent = 'gemini-1.5-pro, gemini-1.5-flash';
-      if(!modelInput.value.includes('gemini')) modelInput.value = 'gemini-1.5-pro';
+  state.error = null;
+  state.step = 3;
+  renderSteps();
+  renderContent();
+}
+
+// Paso 3: Insumos, Carga de Archivo y Planificación
+function renderStep3(container){
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <h2>Paso 3: Carga de <span>Sílabo / Planificación Didáctica</span></h2>
+    <p class="hint">Carga el programa de la asignatura en Word (.docx) o PDF para que la IA extraiga los contenidos, o redacta/pega los lineamientos clave.</p>
+
+    <div class="upload-box">
+      <label style="margin-top:0;">Subir archivo de sílabo o planificación (.docx / .pdf)</label>
+      <input type="file" id="fileInput" accept=".docx, .pdf" onchange="procesarArchivo(this)">
+      <div id="uploadStatus" class="upload-status" style="display:none;"></div>
+      <div id="uploadPreview" class="upload-preview" style="display:none;"></div>
+    </div>
+
+    <div class="divider-or">O BIEN INGRESA LA INFORMACIÓN MANUALMENTE</div>
+
+    <label>Presentación y Descripción del Espacio</label>
+    <textarea id="fPresentacion" placeholder="Breve introducción y fundamentación del curso...">${state.doc.presentacion}</textarea>
+
+    <label>Competencias Genéricas y Específicas</label>
+    <textarea id="fCompetencias" placeholder="Competencias que alcanzará el estudiante al concluir el espacio formativo...">${state.doc.competencias}</textarea>
+
+    <label>Metodología y Estrategias Formativas</label>
+    <textarea id="fMetodologia" placeholder="Enfoque metodológico, aprendizaje basado en proyectos, casos, etc...">${state.doc.metodologia}</textarea>
+
+    <label>Criterios y Sistema de Evaluación</label>
+    <textarea id="fEvaluacion" placeholder="Evaluaciones diagnósticas, formativas y sumativas...">${state.doc.evaluacion}</textarea>
+
+    <div class="nav-row">
+      <button class="btn-secondary" onclick="state.step=2; renderSteps(); renderContent();">← Paso Anterior</button>
+      <button class="btn-primary" onclick="generarGuia()">Generar Guía Metodológica Completa ⚡</button>
+    </div>
+  `;
+  container.appendChild(card);
+}
+
+// Extracción de texto desde DOCX y PDF en el cliente
+async function procesarArchivo(input){
+  const file = input.files[0];
+  if(!file) return;
+
+  const statusEl = document.getElementById('uploadStatus');
+  const previewEl = document.getElementById('uploadPreview');
+
+  statusEl.style.display = 'block';
+  statusEl.className = 'upload-status loading';
+  statusEl.textContent = `Procesando "${file.name}"...`;
+  previewEl.style.display = 'none';
+
+  try{
+    let texto = '';
+    if(file.name.toLowerCase().endsWith('.docx')){
+      if(!window.mammoth) throw new Error("Librería Mammoth no disponible.");
+      const arrayBuffer = await file.arrayBuffer();
+      const res = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+      texto = res.value;
+    } else if(file.name.toLowerCase().endsWith('.pdf')){
+      if(!window.pdfjsLib) throw new Error("Librería PDF.js no disponible.");
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let paginasTexto = [];
+      for(let i = 1; i <= pdf.numPages; i++){
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const str = textContent.items.map(item => item.str).join(' ');
+        paginasTexto.push(str);
+      }
+      texto = paginasTexto.join('\n\n');
+    } else {
+      throw new Error("Formato no compatible. Por favor sube un archivo .docx o .pdf");
     }
+
+    state.doc.textoAnalizado = texto;
+    state.doc.archivoNombre = file.name;
+
+    statusEl.className = 'upload-status ready';
+    statusEl.textContent = `✓ Archivo "${file.name}" cargado exitosamente (${texto.length} caracteres leídos).`;
+    previewEl.style.display = 'block';
+    previewEl.textContent = texto.substring(0, 500) + (texto.length > 500 ? '...\n[Texto truncado para vista previa]' : '');
+
+    // Autocompletar campos si están vacíos con un extracto
+    if(!document.getElementById('fPresentacion').value){
+      document.getElementById('fPresentacion').value = `Información extraída del archivo adjunto ${file.name}.`;
+    }
+  }catch(e){
+    statusEl.className = 'upload-status';
+    statusEl.style.color = '#8A2E0C';
+    statusEl.textContent = `Error al procesar archivo: ${e.message}`;
   }
 }
 
-function guardarConfigIA(){
-  state.configIA.provider = document.getElementById('cfgProvider').value;
-  state.configIA.apiKey = document.getElementById('cfgApiKey').value.trim();
-  state.configIA.model = document.getElementById('cfgModel').value.trim();
-  state.configIA.baseUrl = document.getElementById('cfgBaseUrl').value.trim();
+// CAPA UNIVERSAL DE LLAMADAS IA
+async function ejecutarLlamadaIA(prompt, systemMsg){
+  const { provider, apiKey, model, baseUrl } = state.config;
 
-  localStorage.setItem('gm_ia_provider', state.configIA.provider);
-  localStorage.setItem('gm_ia_key', state.configIA.apiKey);
-  localStorage.setItem('gm_ia_model', state.configIA.model);
-  localStorage.setItem('gm_ia_baseurl', state.configIA.baseUrl);
-
-  actualizarEstadoConexion();
-  cerrarConfigIA();
-}
-
-/**
- * Capa de Abstracción para Consultar Cualquier IA
- */
-async function callIA(prompt, systemInstruction = "Eres un especialista en diseño curricular e instruccional pedagógico.") {
-  if(!state.configIA.apiKey){
-    abrirConfigIA();
-    throw new Error("Por favor, ingresa tu API Key para continuar.");
-  }
-
-  const { provider, apiKey, model, baseUrl } = state.configIA;
-
-  if (provider === 'anthropic') {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+  if(provider === 'anthropic'){
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -450,528 +829,361 @@ async function callIA(prompt, systemInstruction = "Eres un especialista en dise�
       body: JSON.stringify({
         model: model || 'claude-3-5-sonnet-20241022',
         max_tokens: 4000,
-        system: systemInstruction,
+        system: systemMsg,
         messages: [{ role: 'user', content: prompt }]
       })
     });
-    if(!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error?.message || 'Error en Anthropic API');
+    if(!resp.ok){
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Error ${resp.status} en Anthropic API`);
     }
-    const data = await response.json();
+    const data = await resp.json();
     return data.content[0].text;
   }
 
-  if (provider === 'openai' || provider === 'compatible') {
-    const url = provider === 'openai' ? 'https://api.openai.com/v1/chat/completions' : `${baseUrl.replace(/\/$/, '')}/chat/completions`;
-    const response = await fetch(url, {
+  if(provider === 'openai' || provider === 'compatible'){
+    const endpoint = provider === 'openai' 
+      ? 'https://api.openai.com/v1/chat/completions' 
+      : `${baseUrl.replace(/\/$/, '')}/chat/completions`;
+
+    const resp = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: model || (provider === 'openai' ? 'gpt-4o' : 'deepseek-chat'),
+        model: model || 'gpt-4o',
         messages: [
-          { role: 'system', content: systemInstruction },
+          { role: 'system', content: systemMsg },
           { role: 'user', content: prompt }
         ],
         temperature: 0.7
       })
     });
-    if(!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error?.message || `Error en ${provider.toUpperCase()} API`);
+    if(!resp.ok){
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Error ${resp.status} en API`);
     }
-    const data = await response.json();
+    const data = await resp.json();
     return data.choices[0].message.content;
   }
 
-  if (provider === 'gemini') {
+  if(provider === 'gemini'){
     const cleanModel = model || 'gemini-1.5-pro';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`;
+    const resp = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction }] },
+        systemInstruction: { parts: [{ text: systemMsg }] },
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.7, maxOutputTokens: 4000 }
       })
     });
-    if(!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error?.message || 'Error en Gemini API');
+    if(!resp.ok){
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Error ${resp.status} en Gemini API`);
     }
-    const data = await response.json();
+    const data = await resp.json();
     return data.candidates[0].content.parts[0].text;
   }
 
-  throw new Error("Proveedor no soportado.");
+  throw new Error("Proveedor de Inteligencia Artificial no soportado.");
 }
 
-function parseJsonFromAI(rawText) {
-  let cleaned = rawText.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```[a-z]*\n/i, "").replace(/```$/g, "").trim();
+function limpiarYParsearJSON(texto){
+  let t = texto.trim();
+  if(t.startsWith("```")){
+    t = t.replace(/^```[a-z]*\n/i, "").replace(/```$/g, "").trim();
   }
-  return JSON.parse(cleaned);
+  return JSON.parse(t);
 }
 
-// Renderizado de la navegación por pasos
-function renderStepsNav(){
-  const nav = document.getElementById('stepsNav');
-  nav.innerHTML = '';
-  steps.forEach(s => {
-    const tab = document.createElement('div');
-    tab.className = `step-tab ${state.step === s.id ? 'active' : ''} ${state.step > s.id ? 'done' : ''}`;
-    tab.textContent = s.label;
-    tab.onclick = () => {
-      if(state.loading) return;
-      if(s.id < state.step || (s.id === 2 && state.espacio.nombreEspacio) || (s.id === 3 && state.modulos.length) || (s.id === 4 && state.guiaGenerada)){
-        state.step = s.id;
-        render();
-      }
-    };
-    nav.appendChild(tab);
-  });
-}
-
-// VISTAS PASO A PASO
-function render(){
-  renderStepsNav();
-  const content = document.getElementById('content');
-  content.innerHTML = '';
-
-  if(state.loading){
-    content.innerHTML = `
-      <div class="card" style="text-align:center; padding:50px 20px;">
-        <div class="spinner" style="width:36px; height:36px; margin-bottom:16px;"></div>
-        <h3 style="color:var(--azul-principal); margin-bottom:6px;">Procesando con ${state.configIA.provider.toUpperCase()} (${state.configIA.model})...</h3>
-        <p style="color:#667085; font-size:14px;">${state.loadingMessage || 'El modelo está elaborando tu propuesta instruccional...'}</p>
-      </div>
-    `;
-    return;
-  }
-
-  if(state.step === 1) renderPaso1(content);
-  else if(state.step === 2) renderPaso2(content);
-  else if(state.step === 3) renderPaso3(content);
-  else if(state.step === 4) renderPaso4(content);
-}
-
-// Paso 1: Configuración del Espacio
-function renderPaso1(container){
-  const el = document.createElement('div');
-  el.className = 'card';
-  el.innerHTML = `
-    <h2>Paso 1: Información General del Proceso Formativo</h2>
-    <div class="form-group">
-      <label>Nombre del Espacio / Taller / Curso *</label>
-      <input type="text" id="nombreEspacio" value="${escapeHtml(state.espacio.nombreEspacio)}" placeholder="Ej. Formación de Lideresas Comunitarias en Gobernanza Local">
-    </div>
-    <div class="form-group">
-      <label>Objetivo General de Aprendizaje *</label>
-      <textarea id="objetivoGeneral" rows="3" placeholder="Ej. Fortalecer capacidades metodológicas y prácticas para la incidencia en políticas públicas...">${escapeHtml(state.espacio.objetivoGeneral)}</textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Público Meta / Participantes</label>
-        <input type="text" id="publicoMeta" value="${escapeHtml(state.espacio.publicoMeta)}" placeholder="Ej. Mujeres lideresas comunitarias y jóvenes rurales">
-      </div>
-      <div class="form-group">
-        <label>Enfoque Metodológico</label>
-        <input type="text" id="metodologia" value="${escapeHtml(state.espacio.metodologia)}" placeholder="Ej. Educación popular, enfoque de derechos y género">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Duración Total Estimada (Horas)</label>
-        <input type="text" id="duracionHoras" value="${state.espacio.duracionHoras}">
-      </div>
-      <div class="form-group">
-        <label>Cantidad de Módulos Sugeridos</label>
-        <input type="number" id="cantidadModulos" min="1" max="8" value="${state.espacio.cantidadModulos}">
-      </div>
-    </div>
-    <div class="acciones">
-      <div></div>
-      <button class="btn btn-accent" onclick="generarEstructuraModulos()">Siguiente: Generar Módulos con IA →</button>
-    </div>
-  `;
-  container.appendChild(el);
-}
-
-async function generarEstructuraModulos(){
-  const nombre = document.getElementById('nombreEspacio').value.trim();
-  const obj = document.getElementById('objetivoGeneral').value.trim();
-  if(!nombre || !obj){
-    alert('Por favor, completa el nombre del espacio y el objetivo general.');
-    return;
-  }
-  state.espacio.nombreEspacio = nombre;
-  state.espacio.objetivoGeneral = obj;
-  state.espacio.publicoMeta = document.getElementById('publicoMeta').value.trim();
-  state.espacio.metodologia = document.getElementById('metodologia').value.trim();
-  state.espacio.duracionHoras = document.getElementById('duracionHoras').value.trim();
-  state.espacio.cantidadModulos = parseInt(document.getElementById('cantidadModulos').value) || 3;
+// Orquestación y Generación de la Guía Metodológica
+async function generarGuia(){
+  state.doc.presentacion = document.getElementById('fPresentacion').value.trim();
+  state.doc.competencias = document.getElementById('fCompetencias').value.trim();
+  state.doc.metodologia = document.getElementById('fMetodologia').value.trim();
+  state.doc.evaluacion = document.getElementById('fEvaluacion').value.trim();
 
   state.loading = true;
-  state.loadingMessage = 'Diseñando la arquitectura temática y dosificación de módulos...';
-  render();
+  state.loadingMsg = `Conectando con ${state.config.provider.toUpperCase()} (${state.config.model}) para construir la Guía Metodológica...`;
+  renderContent();
 
-  const prompt = `Actúa como diseñador curricular experto. Diseña una estructura modular para el siguiente proceso formativo:
-Nombre: "${state.espacio.nombreEspacio}"
-Objetivo General: "${state.espacio.objetivoGeneral}"
-Público Meta: "${state.espacio.publicoMeta}"
-Metodología: "${state.espacio.metodologia}"
-Duración Total: ${state.espacio.duracionHoras} horas
-Cantidad de Módulos requerida: ${state.espacio.cantidadModulos}
+  const systemMsg = "Eres un especialista senior en diseño instruccional y mediación pedagógica universitaria virtual de la Universidad Pedagógica Nacional Francisco Morazán (UPNFM). Tu misión es elaborar la Guía Metodológica Oficial del espacio pedagógico en formato estructurado JSON.";
 
-Debes responder ÚNICAMENTE con un objeto JSON válido (sin explicaciones adicionales ni texto antes o después) con la siguiente estructura:
+  const userPrompt = `A partir de la siguiente información curricular y pedagógica, elabora la GUÍA METODOLÓGICA del espacio pedagógico:
+
+DATOS GENERALES:
+- Espacio: ${state.doc.asignatura}
+- Código: ${state.doc.codigo}
+- Modalidad: ${state.doc.modalidad}
+- Período: ${state.doc.periodo}
+- Docente: ${state.doc.docente}
+- UV/Créditos: ${state.doc.creditos}
+- Semanas: ${state.doc.semanas}
+
+INSUMOS / DESCRIPCIÓN:
+- Presentación: ${state.doc.presentacion}
+- Competencias: ${state.doc.competencias}
+- Metodología: ${state.doc.metodologia}
+- Evaluación: ${state.doc.evaluacion}
+${state.doc.textoAnalizado ? `\nCONTENIDO EXTRAÍDO DEL DOCUMENTO:\n${state.doc.textoAnalizado.substring(0, 4500)}` : ''}
+
+Debes responder ÚNICAMENTE con un JSON válido (sin texto antes ni después) con exactamente la siguiente estructura:
 {
-  "modulos": [
+  "introduccion": "Texto detallado y motivador de bienvenida y presentación...",
+  "competencias": [
+    "Competencia 1...",
+    "Competencia 2...",
+    "Competencia 3..."
+  ],
+  "metodologia": "Explicación del modelo pedagógico virtual, rol del estudiante y rol docente...",
+  "evaluacion": "Criterios y políticas de entrega...",
+  "unidades": [
     {
-      "id": 1,
-      "titulo": "Título del Módulo",
-      "objetivo": "Objetivo específico de este módulo",
-      "duracion": "4 horas",
-      "temas": ["Tema 1", "Tema 2", "Tema 3"]
+      "semana": "Semana 1 - 2",
+      "unidad": "Unidad I: Nombre de la Unidad",
+      "contenidos": "Temas principales a abordar...",
+      "actividades": "Actividades de aprendizaje y tareas prácticas...",
+      "recursos": "Lecturas, videos y herramientas virtuales...",
+      "evaluacion": "Evidencia de aprendizaje y ponderación"
+    },
+    {
+      "semana": "Semana 3 - 4",
+      "unidad": "Unidad II: Nombre de la Unidad",
+      "contenidos": "...",
+      "actividades": "...",
+      "recursos": "...",
+      "evaluacion": "..."
+    },
+    {
+      "semana": "Semana 5 - 6",
+      "unidad": "Unidad III: Nombre de la Unidad",
+      "contenidos": "...",
+      "actividades": "...",
+      "recursos": "...",
+      "evaluacion": "..."
     }
   ]
 }`;
 
   try{
-    const raw = await callIA(prompt);
-    const parsed = parseJsonFromAI(raw);
-    state.modulos = parsed.modulos || [];
-    state.step = 2;
+    const raw = await ejecutarLlamadaIA(userPrompt, systemMsg);
+    const parsed = limpiarYParsearJSON(raw);
+    state.guiaGenerada = parsed;
+    state.step = 4;
   }catch(e){
-    alert('Error al generar estructura: ' + e.message);
+    state.error = 'Ocurrió un error al generar la guía: ' + e.message;
   }finally{
     state.loading = false;
-    render();
+    renderSteps();
+    renderContent();
   }
 }
 
-// Paso 2: Revisión de Módulos
-function renderPaso2(container){
-  const el = document.createElement('div');
-  el.className = 'card';
-  
-  let modulosHtml = state.modulos.map((m, idx) => `
-    <div style="border:1px solid #E2E8F0; border-radius:8px; padding:14px; margin-bottom:12px; background:#FAFAFA;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span style="font-weight:700; color:var(--azul-secundario);">Módulo ${idx+1}</span>
-        <input type="text" style="width:120px; text-align:right;" value="${escapeHtml(m.duracion || '')}" onchange="state.modulos[${idx}].duracion = this.value" placeholder="Duración">
-      </div>
-      <div class="form-group">
-        <label>Título del Módulo</label>
-        <input type="text" value="${escapeHtml(m.titulo)}" onchange="state.modulos[${idx}].titulo = this.value">
-      </div>
-      <div class="form-group">
-        <label>Objetivo Específico</label>
-        <textarea rows="2" onchange="state.modulos[${idx}].objetivo = this.value">${escapeHtml(m.objetivo)}</textarea>
-      </div>
-      <div class="form-group">
-        <label>Temas / Contenidos Clave (separados por coma)</label>
-        <input type="text" value="${escapeHtml((m.temas || []).join(', '))}" onchange="state.modulos[${idx}].temas = this.value.split(',').map(s=>s.trim())">
-      </div>
-    </div>
-  `).join('');
+// Paso 4: Visualización Idéntica y Exportación Word / PDF
+function renderStep4(container){
+  const card = document.createElement('div');
+  card.className = 'card';
 
-  el.innerHTML = `
-    <h2>Paso 2: Revisión de Módulos y Objetivos Específicos</h2>
-    <p style="font-size:13px; color:#667085; margin-bottom:16px;">Verifica o ajusta los módulos propuestos por la IA antes de generar la secuencia didáctica completa.</p>
-    <div>${modulosHtml}</div>
-    <div class="acciones">
-      <button class="btn btn-outline" onclick="state.step=1; render();">← Volver al Paso 1</button>
-      <button class="btn btn-accent" onclick="generarGuiaCompleta()">Generar Guía y Guiones Didácticos →</button>
-    </div>
-  `;
-  container.appendChild(el);
-}
+  const g = state.guiaGenerada;
+  const d = state.doc;
 
-// Paso 3: Generación Metodológica
-async function generarGuiaCompleta(){
-  state.loading = true;
-  state.loadingMessage = 'Construyendo momentos didácticos (Inicio, Desarrollo, Cierre), técnicas, tiempos y productos de aprendizaje...';
-  render();
-
-  const prompt = `Actúa como especialista pedagógico en capacitación y educación de adultos. A partir del siguiente diseño, genera la GUÍA METODOLÓGICA detallada:
-Espacio: "${state.espacio.nombreEspacio}"
-Objetivo General: "${state.espacio.objetivoGeneral}"
-Público Meta: "${state.espacio.publicoMeta}"
-Metodología: "${state.espacio.metodologia}"
-Duración Total: ${state.espacio.duracionHoras}
-
-Módulos:
-${JSON.stringify(state.modulos, null, 2)}
-
-Para CADA módulo, desglosa la sesión en momentos didácticos estructurados con exactitud.
-Responde ÚNICAMENTE con un JSON válido con esta estructura:
-{
-  "resumenEspacio": {
-    "nombre": "${state.espacio.nombreEspacio}",
-    "horas": "${state.espacio.duracionHoras}",
-    "enfoque": "${state.espacio.metodologia}"
-  },
-  "guiones": [
-    {
-      "moduloTitulo": "Título del Módulo",
-      "objetivo": "Objetivo específico",
-      "duracionModulo": "X horas",
-      "momentos": [
-        {
-          "fase": "Inicio / Motivación",
-          "tiempoMin": 30,
-          "actividad": "Descripción de la actividad o dinámica",
-          "tecnica": "Nombre de la técnica participativa",
-          "recursos": "Materiales requeridos",
-          "productoEsperado": "Evidencia esperada"
-        },
-        {
-          "fase": "Desarrollo / Construcción",
-          "tiempoMin": 90,
-          "actividad": "Exposición dialogada y trabajo grupal...",
-          "tecnica": "Estudio de casos / Trabajo en grupos",
-          "recursos": "Guías impresas, papelógrafos, marcadores",
-          "productoEsperado": "Matriz completada por equipo"
-        },
-        {
-          "fase": "Cierre / Evaluación",
-          "tiempoMin": 30,
-          "actividad": "Plenaria de retroalimentación y síntesis",
-          "tecnica": "Círculo de reflexión",
-          "recursos": "Fichas de evaluación",
-          "productoEsperado": "Compromisos individuales asumidos"
-        }
-      ]
-    }
-  ]
-}`;
-
-  try{
-    const raw = await callIA(prompt);
-    state.guiaGenerada = parseJsonFromAI(raw);
-    state.step = 3;
-  }catch(e){
-    alert('Error al generar la guía metodológica: ' + e.message);
-  }finally{
-    state.loading = false;
-    render();
-  }
-}
-
-function renderPaso3(container){
-  const el = document.createElement('div');
-  el.className = 'card';
-
-  let vistaHtml = '';
-  if(state.guiaGenerada && state.guiaGenerada.guiones){
-    vistaHtml = state.guiaGenerada.guiones.map((g, idx) => `
-      <div class="card-sesion">
-        <h3>
-          <span>Módulo ${idx+1}: ${escapeHtml(g.moduloTitulo)}</span>
-          <span style="font-size:12px; font-weight:normal; background:var(--gris-suave); padding:3px 8px; border-radius:4px;">${escapeHtml(g.duracionModulo || '')}</span>
-        </h3>
-        <p style="font-size:13px; color:#555; margin-bottom:10px;"><strong>Objetivo:</strong> ${escapeHtml(g.objetivo)}</p>
-        <table class="table-resumen">
-          <thead>
-            <tr>
-              <th style="width:18%;">Fase / Momento</th>
-              <th style="width:10%;">Tiempo</th>
-              <th style="width:32%;">Actividad y Metodología</th>
-              <th style="width:20%;">Técnica y Recursos</th>
-              <th style="width:20%;">Producto Esperado</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${(g.momentos || []).map(m => `
-              <tr>
-                <td><strong>${escapeHtml(m.fase)}</strong></td>
-                <td>${escapeHtml(m.tiempoMin ? m.tiempoMin + ' min' : '')}</td>
-                <td>${escapeHtml(m.actividad)}</td>
-                <td><em>${escapeHtml(m.tecnica)}</em><br><span style="font-size:11px; color:#666;">${escapeHtml(m.recursos)}</span></td>
-                <td>${escapeHtml(m.productoEsperado)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+  let unidadesTr = '';
+  if(g && g.unidades){
+    unidadesTr = g.unidades.map(u => `
+      <tr>
+        <td style="font-weight:700; color:var(--azul-principal);">${escapeHtml(u.semana)}</td>
+        <td><strong>${escapeHtml(u.unidad)}</strong><br><small style="color:#555;">${escapeHtml(u.contenidos)}</small></td>
+        <td>${escapeHtml(u.actividades)}</td>
+        <td>${escapeHtml(u.recursos)}</td>
+        <td><span class="pill">${escapeHtml(u.evaluacion)}</span></td>
+      </tr>
     `).join('');
   }
 
-  el.innerHTML = `
-    <h2>Paso 3: Visualización del Guión Metodológico</h2>
-    <p style="font-size:13px; color:#667085;">Revisa la secuencia instruccional generada por la IA antes de descargar los archivos imprimibles y ejecutables.</p>
-    <div class="preview-box">${vistaHtml}</div>
-    <div class="acciones">
-      <button class="btn btn-outline" onclick="state.step=2; render();">← Ajustar Módulos</button>
-      <button class="btn btn-accent" onclick="state.step=4; render();">Continuar a Descargas y PDF →</button>
-    </div>
-  `;
-  container.appendChild(el);
-}
-
-// Paso 4: Exportación (Word y PDF con idéntica estructura y estilo)
-function renderPaso4(container){
-  const el = document.createElement('div');
-  el.className = 'card';
-  el.innerHTML = `
-    <h2>Paso 4: Exportación de Documentos</h2>
-    <p style="font-size:14px; color:#475467; margin-bottom:20px;">Tu guía instruccional está lista para ser distribuida a facilitadores, docentes o coordinadores pedagógicos.</p>
+  card.innerHTML = `
+    <h2>Paso 4: <span>Guía Metodológica Generada</span></h2>
     
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
-      <div style="border:1px solid #E2E8F0; padding:18px; border-radius:10px; background:#FAFAFA;">
-        <h3 style="margin-top:0; color:var(--azul-principal);">Documento Editable (.doc / Word)</h3>
-        <p style="font-size:12px; color:#667085;">Genera un archivo compatible con Microsoft Word con la portada institucional, tablas metodológicas y diseño oficial.</p>
-        <button class="btn" style="background:#0E408B; width:100%;" onclick="descargarWord()">Descargar en Word (.doc)</button>
-      </div>
-
-      <div style="border:1px solid #E2E8F0; padding:18px; border-radius:10px; background:#FAFAFA;">
-        <h3 style="margin-top:0; color:var(--azul-principal);">Documento PDF Profesional</h3>
-        <p style="font-size:12px; color:#667085;">Compila la guía metodológica directamente en formato PDF horizontal con división de páginas optimizada.</p>
-        <button class="btn btn-accent" style="width:100%;" id="btnDescargarPdf" onclick="descargarPDF(this)">Descargar en PDF (.pdf)</button>
-      </div>
+    <div class="export-bar no-print">
+      <button class="btn-primary" onclick="window.print()">🖨️ Imprimir / Guardar en PDF</button>
+      <button class="btn-gold" onclick="descargarWord()">📄 Descargar en Word (.doc)</button>
+      <button class="btn-outline" onclick="state.step=3; renderSteps(); renderContent();">← Modificar Insumos</button>
     </div>
 
-    <div id="pdfExportContainer" style="display:none; width:1120px; background:#FFF; color:#1B2530; font-family:'Segoe UI',Arial,sans-serif; padding:40px;">
-      <div style="text-align:center; border-bottom:3px solid #02244F; padding-bottom:16px; margin-bottom:24px;">
-        <h1 style="color:#02244F; font-size:24px; margin:0 0 6px 0;">GUÍA METODOLÓGICA INSTRUCCIONAL</h1>
-        <h2 style="color:#F05A12; font-size:18px; margin:0;">${escapeHtml(state.espacio.nombreEspacio)}</h2>
-      </div>
-
-      <table style="width:100%; border-collapse:collapse; margin-bottom:24px; font-size:13px;">
-        <tr>
-          <td style="padding:6px; background:#F4F6F9; font-weight:bold; width:25%;">Objetivo General:</td>
-          <td style="padding:6px; border-bottom:1px solid #E2E8F0;" colspan="3">${escapeHtml(state.espacio.objetivoGeneral)}</td>
-        </tr>
-        <tr>
-          <td style="padding:6px; background:#F4F6F9; font-weight:bold;">Público Meta:</td>
-          <td style="padding:6px; border-bottom:1px solid #E2E8F0;">${escapeHtml(state.espacio.publicoMeta)}</td>
-          <td style="padding:6px; background:#F4F6F9; font-weight:bold; width:15%;">Duración Total:</td>
-          <td style="padding:6px; border-bottom:1px solid #E2E8F0;">${escapeHtml(state.espacio.duracionHoras)} horas</td>
-        </tr>
-      </table>
-
-      ${(state.guiaGenerada?.guiones || []).map((g, i) => `
-        <div style="margin-bottom:28px;">
-          <div style="background:#0E408B; color:#FFF; padding:8px 14px; font-weight:bold; font-size:15px; border-radius:4px 4px 0 0;">
-            MÓDULO ${i+1}: ${escapeHtml(g.moduloTitulo).toUpperCase()} (${escapeHtml(g.duracionModulo || '')})
-          </div>
-          <div style="padding:8px 12px; background:#F8F9FA; border-left:1px solid #CCC; border-right:1px solid #CCC; font-size:12px; font-style:italic;">
-            <strong>Objetivo:</strong> ${escapeHtml(g.objetivo)}
-          </div>
-          <table class="doc-preview-table">
-            <thead>
-              <tr>
-                <th style="width:15%;">Momento</th>
-                <th style="width:10%;">Tiempo</th>
-                <th style="width:35%;">Actividad y Procedimiento</th>
-                <th style="width:20%;">Técnica y Recursos</th>
-                <th style="width:20%;">Evidencia / Producto</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(g.momentos || []).map(m => `
-                <tr>
-                  <td style="font-weight:bold;">${escapeHtml(m.fase)}</td>
-                  <td style="text-align:center;">${escapeHtml(m.tiempoMin ? m.tiempoMin + ' min' : '')}</td>
-                  <td>${escapeHtml(m.actividad)}</td>
-                  <td><b>${escapeHtml(m.tecnica)}</b><br><small>${escapeHtml(m.recursos)}</small></td>
-                  <td>${escapeHtml(m.productoEsperado)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+    <div style="margin-top:24px;">
+      <!-- Estructura visual original de la Guía -->
+      <div class="doc-wrap" id="documentoGuia">
+        <div class="doc-header">
+          <h2>UNIVERSIDAD PEDAGÓGICA NACIONAL FRANCISCO MORAZÁN</h2>
+          <h3>VICERRECTORÍA ACADÉMICA · PROGRAMA DE EDUCACIÓN VIRTUAL</h3>
+          <h3>${escapeHtml(d.facultad).toUpperCase()}</h3>
+          <h3>DEPARTAMENTO DE ${escapeHtml(d.departamento).toUpperCase()}</h3>
+          <div class="titulo-guia">GUÍA METODOLÓGICA DE APRENDIZAJE</div>
+          <div style="font-size:15px; color:#CFE0F5; margin-top:4px;">${escapeHtml(d.asignatura).toUpperCase()}</div>
         </div>
-      `).join('')}
-    </div>
 
-    <div class="acciones">
-      <button class="btn btn-outline" onclick="state.step=3; render();">← Volver al Detalle</button>
-      <button class="btn" onclick="reiniciarProceso()">Reiniciar Nuevo Espacio</button>
+        <div class="doc-body">
+          <div class="doc-section">
+            <h4>I. DATOS DE IDENTIFICACIÓN</h4>
+            <div class="accent-bar"></div>
+            <table class="doc-table identif">
+              <tr>
+                <td class="label">Espacio Pedagógico:</td>
+                <td><strong>${escapeHtml(d.asignatura)}</strong></td>
+                <td class="label">Código:</td>
+                <td>${escapeHtml(d.codigo || 'N/D')}</td>
+              </tr>
+              <tr>
+                <td class="label">Modalidad:</td>
+                <td>${escapeHtml(d.modalidad)}</td>
+                <td class="label">Período Académico:</td>
+                <td>${escapeHtml(d.periodo || 'I Período')}</td>
+              </tr>
+              <tr>
+                <td class="label">Unidades Valorativas:</td>
+                <td>${escapeHtml(d.creditos)} UV</td>
+                <td class="label">Duración:</td>
+                <td>${escapeHtml(d.semanas)} semanas</td>
+              </tr>
+              <tr>
+                <td class="label">Profesor(a) Responsable:</td>
+                <td>${escapeHtml(d.docente || 'Equipo Docente')}</td>
+                <td class="label">Correo Electrónico:</td>
+                <td>${escapeHtml(d.emailDocente || 'virtual@upnfm.edu.hn')}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="doc-section">
+            <h4>II. INTRODUCCIÓN Y PRESENTACIÓN</h4>
+            <div class="accent-bar"></div>
+            <p>${escapeHtml(g?.introduccion || d.presentacion)}</p>
+          </div>
+
+          <div class="doc-section">
+            <h4>III. COMPETENCIAS DEL ESPACIO PEDAGÓGICO</h4>
+            <div class="accent-bar"></div>
+            <ul class="doc-list">
+              ${(g?.competencias || []).map(c => `<li>${escapeHtml(c)}</li>`).join('')}
+            </ul>
+          </div>
+
+          <div class="doc-section">
+            <h4>IV. METODOLOGÍA Y ORIENTACIONES PARA EL APRENDIZAJE</h4>
+            <div class="accent-bar"></div>
+            <p>${escapeHtml(g?.metodologia || d.metodologia)}</p>
+          </div>
+
+          <div class="doc-section">
+            <h4>V. PLANIFICACIÓN DIDÁCTICA MODULAR</h4>
+            <div class="accent-bar"></div>
+            <table class="doc-table">
+              <thead>
+                <tr>
+                  <th style="width:12%;">Semana</th>
+                  <th style="width:28%;">Unidad y Contenidos</th>
+                  <th style="width:26%;">Actividades de Aprendizaje</th>
+                  <th style="width:18%;">Recursos y Medios</th>
+                  <th style="width:16%;">Evaluación</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${unidadesTr}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="doc-section">
+            <h4>VI. POLÍTICAS DE EVALUACIÓN Y ACREDITACIÓN</h4>
+            <div class="accent-bar"></div>
+            <p>${escapeHtml(g?.evaluacion || d.evaluacion)}</p>
+          </div>
+
+          <div class="doc-footer">
+            Universidad Pedagógica Nacional Francisco Morazán (UPNFM) · Formando los líderes de la educación
+          </div>
+        </div>
+      </div>
     </div>
   `;
-  container.appendChild(el);
+  container.appendChild(card);
 }
 
-function reiniciarProceso(){
-  if(confirm('¿Deseas iniciar una nueva guía metodológica?')){
-    state.step = 1;
-    state.espacio = {
-      nombreEspacio: '',
-      objetivoGeneral: '',
-      publicoMeta: '',
-      duracionHoras: 12,
-      cantidadModulos: 3,
-      metodologia: 'Taller participativo y práctico'
-    };
-    state.modulos = [];
-    state.guiaGenerada = null;
-    render();
-  }
-}
-
-// Generación y descarga Word (.doc)
+// Descarga en formato Microsoft Word (.doc) respetando el diseño institucional
 function descargarWord(){
   if(!state.guiaGenerada) return;
-  const nombreLimpio = (state.espacio.nombreEspacio || 'Guia_Metodologica').replace(/[^a-z0-9áéíóúñ]+/gi,'_');
+  const d = state.doc;
+  const g = state.guiaGenerada;
+  const nombreLimpio = (d.asignatura || 'Guia_Metodologica').replace(/[^a-z0-9áéíóúñ]+/gi,'_');
 
-  let bodyTables = (state.guiaGenerada.guiones || []).map((g, idx) => `
-    <h3 style="color:#0E408B; margin-top:20pt; font-size:14pt; border-bottom:1pt solid #0E408B; padding-bottom:4pt;">
-      MÓDULO ${idx+1}: ${escapeHtml(g.moduloTitulo).toUpperCase()} (${escapeHtml(g.duracionModulo || '')})
-    </h3>
-    <p><b>Objetivo Específico:</b> ${escapeHtml(g.objetivo)}</p>
-    <table border="1" cellpadding="6" cellspacing="0" style="width:100%; border-collapse:collapse; font-size:10pt; font-family:Arial,sans-serif;">
-      <tr style="background:#02244F; color:#FFFFFF; font-weight:bold;">
-        <th style="width:15%;">Fase</th>
-        <th style="width:10%;">Tiempo</th>
-        <th style="width:35%;">Actividad y Secuencia</th>
-        <th style="width:20%;">Técnica y Recursos</th>
-        <th style="width:20%;">Producto Esperado</th>
-      </tr>
-      ${(g.momentos || []).map(m => `
-        <tr>
-          <td><b>${escapeHtml(m.fase)}</b></td>
-          <td align="center">${escapeHtml(m.tiempoMin ? m.tiempoMin + ' min' : '')}</td>
-          <td>${escapeHtml(m.actividad)}</td>
-          <td><b>${escapeHtml(m.tecnica)}</b><br><span style="font-size:9pt; color:#444;">${escapeHtml(m.recursos)}</span></td>
-          <td>${escapeHtml(m.productoEsperado)}</td>
-        </tr>
-      `).join('')}
-    </table>
+  let rowsWord = (g.unidades || []).map(u => `
+    <tr>
+      <td style="border:1px solid #0E408B; padding:8px; font-weight:bold;">${escapeHtml(u.semana)}</td>
+      <td style="border:1px solid #0E408B; padding:8px;"><strong>${escapeHtml(u.unidad)}</strong><br>${escapeHtml(u.contenidos)}</td>
+      <td style="border:1px solid #0E408B; padding:8px;">${escapeHtml(u.actividades)}</td>
+      <td style="border:1px solid #0E408B; padding:8px;">${escapeHtml(u.recursos)}</td>
+      <td style="border:1px solid #0E408B; padding:8px;">${escapeHtml(u.evaluacion)}</td>
+    </tr>
   `).join('');
 
-  const contenido = `
+  const htmlWord = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='[http://www.w3.org/TR/REC-html40](http://www.w3.org/TR/REC-html40)'>
-    <head><meta charset='utf-8'><title>${escapeHtml(state.espacio.nombreEspacio)}</title>
+    <head><meta charset='utf-8'><title>${escapeHtml(d.asignatura)}</title>
     <style>
-      body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20mm; font-size: 11pt; color: #1B2530; }
-      h1 { color: #02244F; font-size: 20pt; text-align: center; }
-      h2 { color: #F05A12; font-size: 14pt; text-align: center; margin-bottom: 24pt; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; color:#1B2530; margin:20mm; }
+      .header-title { text-align:center; background:#02244F; color:#FFFFFF; padding:15pt; }
+      h1 { font-size:16pt; margin:0; }
+      h2 { font-size:12pt; margin:3pt 0; color:#CFE0F5; }
+      .titulo { font-size:18pt; font-weight:bold; color:#F7A307; margin-top:10pt; }
+      .seccion-h { background:#0E408B; color:#FFFFFF; padding:4pt 8pt; font-size:11pt; margin-top:15pt; }
+      table { width:100%; border-collapse:collapse; font-size:10pt; }
     </style>
     </head>
     <body>
-      <h1>GUÍA METODOLÓGICA DE FORMACIÓN</h1>
-      <h2>${escapeHtml(state.espacio.nombreEspacio)}</h2>
-      
-      <table border="1" cellpadding="6" cellspacing="0" style="width:100%; border-collapse:collapse; margin-bottom:20pt; font-size:10pt;">
-        <tr><td style="background:#F4F6F9; font-weight:bold; width:25%;">Objetivo General:</td><td colspan="3">${escapeHtml(state.espacio.objetivoGeneral)}</td></tr>
-        <tr>
-          <td style="background:#F4F6F9; font-weight:bold;">Público Meta:</td><td>${escapeHtml(state.espacio.publicoMeta)}</td>
-          <td style="background:#F4F6F9; font-weight:bold; width:15%;">Duración:</td><td>${escapeHtml(state.espacio.duracionHoras)} horas</td>
-        </tr>
-        <tr><td style="background:#F4F6F9; font-weight:bold;">Enfoque Metodológico:</td><td colspan="3">${escapeHtml(state.espacio.metodologia)}</td></tr>
+      <div class="header-title">
+        <h1>UNIVERSIDAD PEDAGÓGICA NACIONAL FRANCISCO MORAZÁN</h1>
+        <h2>PROGRAMA DE EDUCACIÓN VIRTUAL</h2>
+        <h2>${escapeHtml(d.facultad).toUpperCase()} · ${escapeHtml(d.departamento).toUpperCase()}</h2>
+        <div class="titulo">GUÍA METODOLÓGICA DE APRENDIZAJE</div>
+        <div style="color:#FFFFFF; font-size:13pt; margin-top:4pt;">${escapeHtml(d.asignatura).toUpperCase()}</div>
+      </div>
+
+      <div class="seccion-h">I. DATOS DE IDENTIFICACIÓN</div>
+      <table border="1" style="border-collapse:collapse; margin-top:6pt;">
+        <tr><td style="background:#EAF1FB; font-weight:bold; width:25%;">Espacio:</td><td>${escapeHtml(d.asignatura)}</td><td style="background:#EAF1FB; font-weight:bold; width:25%;">Código:</td><td>${escapeHtml(d.codigo)}</td></tr>
+        <tr><td style="background:#EAF1FB; font-weight:bold;">Modalidad:</td><td>${escapeHtml(d.modalidad)}</td><td style="background:#EAF1FB; font-weight:bold;">Período:</td><td>${escapeHtml(d.periodo)}</td></tr>
+        <tr><td style="background:#EAF1FB; font-weight:bold;">Profesor(a):</td><td>${escapeHtml(d.docente)}</td><td style="background:#EAF1FB; font-weight:bold;">Correo:</td><td>${escapeHtml(d.emailDocente)}</td></tr>
       </table>
 
-      ${bodyTables}
+      <div class="seccion-h">II. INTRODUCCIÓN Y PRESENTACIÓN</div>
+      <p>${escapeHtml(g.introduccion)}</p>
+
+      <div class="seccion-h">III. COMPETENCIAS DEL ESPACIO</div>
+      <ul>
+        ${(g.competencias || []).map(c => `<li>${escapeHtml(c)}</li>`).join('')}
+      </ul>
+
+      <div class="seccion-h">IV. METODOLOGÍA</div>
+      <p>${escapeHtml(g.metodologia)}</p>
+
+      <div class="seccion-h">V. PLANIFICACIÓN DIDÁCTICA MODULAR</div>
+      <table border="1" style="border-collapse:collapse; margin-top:6pt;">
+        <tr style="background:#0E408B; color:#FFFFFF;">
+          <th>Semana</th><th>Unidad y Contenidos</th><th>Actividades</th><th>Recursos</th><th>Evaluación</th>
+        </tr>
+        ${rowsWord}
+      </table>
+
+      <div class="seccion-h">VI. POLÍTICAS DE EVALUACIÓN</div>
+      <p>${escapeHtml(g.evaluacion)}</p>
     </body>
     </html>
   `;
 
-  const blob = new Blob(['\ufeff', contenido], { type: 'application/msword' });
+  const blob = new Blob(['\ufeff', htmlWord], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -980,74 +1192,6 @@ function descargarWord(){
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-// Generación de PDF
-async function descargarPDF(btnEl){
-  const originalText = btnEl.textContent;
-  btnEl.disabled = true;
-  btnEl.textContent = 'Procesando PDF...';
-
-  const hiddenContainer = document.getElementById('pdfExportContainer');
-  hiddenContainer.style.display = 'block';
-
-  try {
-    const { jsPDF } = window.jspdf;
-    const canvas = await html2canvas(hiddenContainer, {
-      scale: 2,
-      useCORS: true,
-      logging: false
-    });
-
-    hiddenContainer.style.display = 'none';
-
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 10;
-    const printWidth = pageWidth - (margin * 2);
-    const pxPerMM = canvas.width / printWidth;
-    const pageHeightPx = (pageHeight - (margin * 2)) * pxPerMM;
-
-    let renderedPx = 0;
-    let firstPage = true;
-
-    while (renderedPx < canvas.height) {
-      const sliceHeightPx = Math.min(pageHeightPx, canvas.height - renderedPx);
-      const sliceCanvas = document.createElement('canvas');
-      sliceCanvas.width = canvas.width;
-      sliceCanvas.height = sliceHeightPx;
-      const sliceCtx = sliceCanvas.getContext('2d');
-
-      sliceCtx.drawImage(
-        canvas,
-        0, renderedPx, canvas.width, sliceHeightPx,
-        0, 0, canvas.width, sliceHeightPx
-      );
-
-      const sliceData = sliceCanvas.toDataURL('image/png');
-      const sliceHeightMM = sliceHeightPx / pxPerMM;
-
-      if (!firstPage) {
-        pdf.addPage();
-      } else {
-        firstPage = false;
-      }
-
-      pdf.addImage(sliceData, 'PNG', margin, margin, printWidth, sliceHeightMM);
-      renderedPx += sliceHeightPx;
-    }
-
-    const nombreLimpio = (state.espacio.nombreEspacio || 'guia_metodologica').replace(/[^a-z0-9áéíóúñ]+/gi,'_');
-    pdf.save(`Guia_Metodologica_${nombreLimpio}.pdf`);
-
-  } catch(e) {
-    alert('Error al generar PDF: ' + e.message);
-    hiddenContainer.style.display = 'none';
-  } finally {
-    btnEl.disabled = false;
-    btnEl.textContent = originalText;
-  }
 }
 
 function escapeHtml(str) {
