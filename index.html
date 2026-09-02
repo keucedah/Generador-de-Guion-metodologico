@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generador de Guía Metodológica</title>
+<title>Generador de Guía Metodológica - UPNFM</title>
 <style>
   :root{
     --azul-principal:#02244F;
@@ -213,6 +213,7 @@
     border-radius:9px;
     font-size:13.5px;
     margin-top:16px;
+    margin-bottom:16px;
   }
 
   .upload-box{
@@ -221,9 +222,6 @@
     padding:16px;
     margin-top:8px;
     background:#FAFBFD;
-  }
-  .upload-box input[type=file]{
-    font-size:13px;
   }
   .upload-status{
     margin-top:12px;
@@ -235,10 +233,6 @@
     color:#1E6B34;
     padding:10px 12px;
     border-radius:8px;
-  }
-  .upload-status.loading{
-    color:var(--azul-secundario);
-    font-weight:600;
   }
   .upload-preview{
     margin-top:8px;
@@ -252,23 +246,8 @@
     overflow:auto;
     white-space:pre-wrap;
   }
-  .divider-or{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    margin:20px 0 4px;
-    color:#9AA6B5;
-    font-size:12px;
-    font-weight:700;
-  }
-  .divider-or::before, .divider-or::after{
-    content:'';
-    flex:1;
-    height:1px;
-    background:#E1E6EE;
-  }
 
-  /* Preview / documento generado */
+  /* Documento Generado */
   .doc-wrap{
     background:var(--blanco);
     border-radius:14px;
@@ -322,6 +301,7 @@
     line-height:1.65;
     color:#2B384A;
     white-space:pre-wrap;
+    margin:0 0 12px 0;
   }
   .doc-list{
     margin:6px 0 0 22px;
@@ -337,7 +317,7 @@
     width:100%;
     border-collapse:collapse;
     margin-top:6px;
-    font-size:12.8px;
+    font-size:12.5px;
   }
   table.doc-table th{
     background:var(--azul-secundario);
@@ -361,17 +341,7 @@
     background:#EAF1FB;
     font-weight:700;
     color:var(--azul-principal);
-    width:34%;
-  }
-  .pill{
-    display:inline-block;
-    background:var(--dorado);
-    color:var(--azul-principal);
-    font-weight:700;
-    font-size:11px;
-    padding:3px 10px;
-    border-radius:999px;
-    margin-bottom:8px;
+    width:30%;
   }
   .doc-footer{
     text-align:center;
@@ -379,14 +349,28 @@
     font-size:11.5px;
     color:#8B96A5;
     border-top:1px solid #EEF1F5;
+    margin-top:30px;
   }
-
   .export-bar{
     display:flex;
     gap:10px;
     justify-content:center;
     flex-wrap:wrap;
-    margin:18px 0 0;
+    margin:18px 0 24px;
+  }
+
+  details.config-box{
+    margin-top:24px;
+    background:#FAFBFD;
+    border:1.5px solid #E1E6EE;
+    border-radius:10px;
+    padding:14px;
+  }
+  details.config-box summary{
+    font-weight:700;
+    color:var(--azul-principal);
+    cursor:pointer;
+    font-size:13.5px;
   }
 
   @media print{
@@ -394,9 +378,11 @@
     .app{max-width:100%;padding:0;}
     .topbar, .steps, .export-bar, .no-print{display:none !important;}
     .doc-wrap{box-shadow:none;}
+    .page-break{page-break-before:always;}
   }
 </style>
-<!-- Bibliotecas CDN oficiales para lectura de DOCX y extracción PDF sin romper el DOM -->
+
+<!-- Librerías cliente necesarias para DOCX, PDF y Exportación visual -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -404,10 +390,12 @@
     window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-<div class="app">
 
+<div class="app">
   <div class="topbar">
     <div>
       <h1>Generador de Guía Metodológica</h1>
@@ -419,111 +407,168 @@
   <div class="steps no-print" id="stepsNav"></div>
 
   <div id="content"></div>
-
 </div>
 
 <script>
-// Estado de la Aplicación
-const state = {
-  step: 1,
-  loading: false,
-  loadingMsg: '',
-  error: null,
-  config: {
-    provider: localStorage.getItem('gm_provider') || 'anthropic',
-    apiKey: localStorage.getItem('gm_apiKey') || '',
-    model: localStorage.getItem('gm_model') || 'claude-3-5-sonnet-20241022',
-    baseUrl: localStorage.getItem('gm_baseUrl') || 'https://api.openai.com/v1'
-  },
-  doc: {
-    asignatura: '',
-    codigo: '',
-    periodo: '',
-    facultad: 'Facultad de Ciencia y Tecnología',
-    departamento: 'Educación Técnico Industrial',
-    modalidad: 'Virtual',
-    creditos: '3',
-    docente: '',
-    emailDocente: '',
-    presentacion: '',
-    competencias: '',
-    metodologia: '',
-    evaluacion: '',
-    semanas: 14,
-    textoAnalizado: '',
-    archivoNombre: ''
-  },
-  guiaGenerada: null
-};
-
-const stepsNames = [
-  '1. Configuración e IA',
-  '2. Datos de Asignatura',
-  '3. Sílabo y Planificación',
-  '4. Guía Metodológica'
+// 1. Catálogos exactos institucionales UPNFM
+const FACULTADES = [
+  "Facultad de Humanidades",
+  "Facultad de Ciencias de la Educación",
+  "Facultad de Ciencias Básicas",
+  "Facultad de Tecnología (FATEC)",
+  "FUNDAUPN",
+  "Otro"
 ];
 
-function init(){
-  renderSteps();
-  renderContent();
+const DEPARTAMENTOS_POR_FACULTAD = {
+  "Facultad de Ciencias de la Educación": [
+    "Administración y Gestión de la Educación",
+    "Educación Básica (FID)",
+    "Educación Preescolar",
+    "Educación Especial",
+    "Orientación Educativa",
+    "Otro"
+  ],
+  "Facultad de Ciencias Básicas": [
+    "Ciencias Naturales",
+    "Ciencias Matemáticas",
+    "Educación Física",
+    "Otro"
+  ],
+  "Facultad de Humanidades": [
+    "Ciencias Sociales",
+    "Letras y Lenguas / Enseñanza del Español",
+    "Enseñanza del Inglés",
+    "Educación Artística",
+    "Otro"
+  ],
+  "Facultad de Tecnología (FATEC)": [
+    "Educación Comercial",
+    "Educación Técnica Industrial",
+    "Turismo y Hostelería",
+    "Informática Educativa",
+    "Otro"
+  ],
+  "FUNDAUPN": [
+    "Otro"
+  ],
+  "Otro": [
+    "Otro"
+  ]
+};
+
+const MODALIDADES = [
+  "Modalidad Presencial (Sistema Regular)",
+  "Modalidad a Distancia (VREAD)",
+  "Modalidad Semipresencial / Híbrida",
+  "Programas Especiales de Profesionalización (PREUFOD / PFP)"
+];
+
+// 2. Estado Global de la Aplicación
+const state = {
+  step: 1,
+  docente: {
+    nombre: '',
+    email: '',
+    horarioAtencion: ''
+  },
+  espacio: {
+    facultad: 'Facultad de Tecnología (FATEC)',
+    facultadOtro: '',
+    depto: 'Informática Educativa',
+    deptoOtro: '',
+    periodo: '',
+    codigo: '',
+    nombreEspacio: '',
+    uv: '3',
+    requisitos: 'Ninguno',
+    modalidad: 'Modalidad a Distancia (VREAD)',
+    fechas: '',
+    horarioClase: ''
+  },
+  descripcion: '',
+  uploadedFile: { name: '', text: '', status: 'idle', error: '' },
+  generated: null,
+  loading: false,
+  error: null,
+  // Proveedores de IA universales
+  apiProvider: localStorage.getItem('gm_universal_provider') || 'anthropic',
+  apiKey: localStorage.getItem('gm_universal_key') || '',
+  apiModel: localStorage.getItem('gm_universal_model') || 'claude-3-5-sonnet-20241022',
+  apiBaseUrl: localStorage.getItem('gm_universal_baseurl') || 'https://api.openai.com/v1'
+};
+
+function getFacultadFinal(){
+  return state.espacio.facultad === 'Otro' ? (state.espacio.facultadOtro || 'Otro') : state.espacio.facultad;
 }
 
-function renderSteps(){
+function getDeptoFinal(){
+  return state.espacio.depto === 'Otro' ? (state.espacio.deptoOtro || 'Otro') : state.espacio.depto;
+}
+
+// Inicialización
+function init(){
+  renderStepsNav();
+  render();
+}
+
+function renderStepsNav(){
   const nav = document.getElementById('stepsNav');
   const badge = document.getElementById('stepBadge');
   badge.textContent = `Paso ${state.step} de 4`;
   nav.innerHTML = '';
   
-  stepsNames.forEach((name, idx) => {
-    const num = idx + 1;
+  const stepTitles = [
+    'Paso 1: Datos Docente',
+    'Paso 2: Datos Espacio',
+    'Paso 3: Insumos e IA',
+    'Paso 4: Guía Generada'
+  ];
+
+  stepTitles.forEach((title, idx) => {
+    const sNum = idx + 1;
     const dot = document.createElement('div');
-    dot.className = `step-dot ${state.step === num ? 'active' : ''} ${state.step > num ? 'done' : ''}`;
-    dot.textContent = name;
+    dot.className = `step-dot ${state.step === sNum ? 'active' : ''} ${state.step > sNum ? 'done' : ''}`;
+    dot.textContent = title;
     dot.onclick = () => {
       if(state.loading) return;
-      if(num < state.step || validarPasoActual(state.step)){
-        state.step = num;
+      if(sNum < state.step || validarPaso(state.step)){
+        state.step = sNum;
         state.error = null;
-        renderSteps();
-        renderContent();
+        renderStepsNav();
+        render();
       }
     };
     nav.appendChild(dot);
   });
 }
 
-function validarPasoActual(step){
+function validarPaso(step){
   if(step === 1){
-    return !!state.config.apiKey;
+    return state.docente.nombre && state.docente.email && state.docente.horarioAtencion;
   }
   if(step === 2){
-    return !!state.doc.asignatura;
+    return state.espacio.nombreEspacio && state.espacio.codigo && state.espacio.periodo;
   }
   return true;
 }
 
-function renderContent(){
+// Router de Vistas
+function render(){
+  renderStepsNav();
   const container = document.getElementById('content');
   container.innerHTML = '';
 
   if(state.loading){
-    container.innerHTML = `
-      <div class="card">
-        <div class="loading-wrap">
-          <div class="spinner"></div>
-          <div class="loading-msg">${state.loadingMsg || 'Generando información pedagógica...'}</div>
-          <p class="hint" style="margin-top:10px;">El modelo seleccionado (${state.config.model}) está procesando el guion instruccional.</p>
-        </div>
-      </div>
-    `;
+    renderLoading(container);
     return;
   }
 
   if(state.error){
-    const errBox = document.createElement('div');
-    errBox.className = 'error-box';
-    errBox.innerHTML = `<strong>Error:</strong> ${state.error}`;
-    container.appendChild(errBox);
+    const err = document.createElement('div');
+    err.className = 'error-box';
+    err.innerHTML = `<strong>Atención:</strong> ${escapeHtml(state.error)}`;
+    container.appendChild(err);
   }
 
   if(state.step === 1) renderStep1(container);
@@ -532,579 +577,771 @@ function renderContent(){
   else if(state.step === 4) renderStep4(container);
 }
 
-// Paso 1: Configuración Universal de IA
+function renderLoading(container){
+  container.innerHTML = `
+    <div class="card">
+      <div class="loading-wrap">
+        <div class="spinner"></div>
+        <div class="loading-msg">Generando Guía Metodológica Institucional con Inteligencia Artificial...</div>
+        <p class="hint" style="margin-top:12px;">El modelo ${escapeHtml(state.apiModel)} está redactando las competencias, unidades temáticas, encuentros tutoriales y criterios de evaluación.</p>
+      </div>
+    </div>
+  `;
+}
+
+// Paso 1: Datos del Docente
 function renderStep1(container){
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `
-    <h2>Paso 1: Configuración de la <span>Inteligencia Artificial</span></h2>
-    <p class="hint">Selecciona tu proveedor preferido e ingresa la API Key correspondiente. Los datos se almacenan de forma local en tu navegador.</p>
+    <h2>Paso 1: Datos del <span>Profesor(a)</span></h2>
     
-    <label class="required">Proveedor de IA</label>
-    <select id="selProvider" onchange="cambiarProveedor(this.value)">
-      <option value="anthropic" ${state.config.provider === 'anthropic' ? 'selected' : ''}>Anthropic (Claude)</option>
-      <option value="openai" ${state.config.provider === 'openai' ? 'selected' : ''}>OpenAI (ChatGPT)</option>
-      <option value="gemini" ${state.config.provider === 'gemini' ? 'selected' : ''}>Google Gemini</option>
-      <option value="compatible" ${state.config.provider === 'compatible' ? 'selected' : ''}>Compatible OpenAI (DeepSeek, Groq, OpenRouter, LocalAI)</option>
-    </select>
+    <label class="required">Nombre completo del profesor(a)</label>
+    <input type="text" id="doc_nombre" value="${escapeHtml(state.docente.nombre)}" placeholder="Ej. Kenfor Euceda">
 
-    <div id="boxBaseUrl" style="display: ${state.config.provider === 'compatible' ? 'block' : 'none'};">
-      <label class="required">Base URL del Proveedor</label>
-      <input type="text" id="txtBaseUrl" value="${state.config.baseUrl}" placeholder="Ej: https://api.deepseek.com/v1">
-      <div class="hint">Endpoint compatible con /chat/completions</div>
+    <div class="grid2">
+      <div>
+        <label class="required">Correo electrónico institucional</label>
+        <input type="email" id="doc_email" value="${escapeHtml(state.docente.email)}" placeholder="ejemplo@upnfm.edu.hn">
+      </div>
+      <div>
+        <label class="required">Horario de atención a consultas</label>
+        <input type="text" id="doc_horario" value="${escapeHtml(state.docente.horarioAtencion)}" placeholder="Ej. Lunes a Viernes de 4:00 PM a 6:00 PM">
+      </div>
     </div>
-
-    <label class="required">Modelo de IA</label>
-    <input type="text" id="txtModel" value="${state.config.model}" placeholder="Modelo">
-    <div class="hint" id="lblModelHint">Sugerencias: claude-3-5-sonnet-20241022, claude-3-haiku-20240307</div>
-
-    <label class="required">API Key</label>
-    <input type="password" id="txtApiKey" value="${state.config.apiKey}" placeholder="sk-...">
-    <div class="hint">Tu clave permanece segura en tu sesión local.</div>
 
     <div class="nav-row">
       <div></div>
-      <button class="btn-primary" onclick="guardarPaso1()">Continuar a Datos de Asignatura →</button>
+      <button class="btn-primary" onclick="guardarStep1()">Siguiente: Datos del Espacio →</button>
     </div>
   `;
   container.appendChild(card);
 }
 
-function cambiarProveedor(prov){
-  state.config.provider = prov;
-  const baseUrlBox = document.getElementById('boxBaseUrl');
-  const txtModel = document.getElementById('txtModel');
-  const lblHint = document.getElementById('lblModelHint');
+function guardarStep1(){
+  const nombre = document.getElementById('doc_nombre').value.trim();
+  const email = document.getElementById('doc_email').value.trim();
+  const horario = document.getElementById('doc_horario').value.trim();
 
-  if(prov === 'anthropic'){
-    baseUrlBox.style.display = 'none';
-    txtModel.value = 'claude-3-5-sonnet-20241022';
-    lblHint.textContent = 'Sugerencias: claude-3-5-sonnet-20241022, claude-3-haiku-20240307';
-  } else if(prov === 'openai'){
-    baseUrlBox.style.display = 'none';
-    txtModel.value = 'gpt-4o';
-    lblHint.textContent = 'Sugerencias: gpt-4o, gpt-4o-mini';
-  } else if(prov === 'gemini'){
-    baseUrlBox.style.display = 'none';
-    txtModel.value = 'gemini-1.5-pro';
-    lblHint.textContent = 'Sugerencias: gemini-1.5-pro, gemini-1.5-flash';
-  } else if(prov === 'compatible'){
-    baseUrlBox.style.display = 'block';
-    txtModel.value = 'deepseek-chat';
-    lblHint.textContent = 'Sugerencias: deepseek-chat, llama-3.1-70b-versatile, mistral-large';
-  }
-}
-
-function guardarPaso1(){
-  const apiKey = document.getElementById('txtApiKey').value.trim();
-  const model = document.getElementById('txtModel').value.trim();
-  const provider = document.getElementById('selProvider').value;
-  const baseUrl = document.getElementById('txtBaseUrl') ? document.getElementById('txtBaseUrl').value.trim() : '';
-
-  if(!apiKey){
-    state.error = 'Por favor ingresa la API Key para continuar.';
-    renderContent();
+  if(!nombre || !email || !horario){
+    state.error = 'Por favor completa todos los campos requeridos del docente.';
+    render();
     return;
   }
 
-  state.config.provider = provider;
-  state.config.apiKey = apiKey;
-  state.config.model = model;
-  state.config.baseUrl = baseUrl;
-
-  localStorage.setItem('gm_provider', provider);
-  localStorage.setItem('gm_apiKey', apiKey);
-  localStorage.setItem('gm_model', model);
-  localStorage.setItem('gm_baseUrl', baseUrl);
-
+  state.docente.nombre = nombre;
+  state.docente.email = email;
+  state.docente.horarioAtencion = horario;
   state.error = null;
   state.step = 2;
-  renderSteps();
-  renderContent();
+  render();
 }
 
-// Paso 2: Datos de Asignatura
+// Paso 2: Datos del Espacio Formativo
 function renderStep2(container){
   const card = document.createElement('div');
   card.className = 'card';
+
+  const facultadesOpts = FACULTADES.map(f => `<option value="${f}" ${state.espacio.facultad === f ? 'selected':''}>${f}</option>`).join('');
+  const deptosActuales = DEPARTAMENTOS_POR_FACULTAD[state.espacio.facultad] || ["Otro"];
+  const deptosOpts = deptosActuales.map(d => `<option value="${d}" ${state.espacio.depto === d ? 'selected':''}>${d}</option>`).join('');
+  const modalidadesOpts = MODALIDADES.map(m => `<option value="${m}" ${state.espacio.modalidad === m ? 'selected':''}>${m}</option>`).join('');
+
   card.innerHTML = `
-    <h2>Paso 2: Datos Generales del <span>Espacio Pedagógico</span></h2>
-    
+    <h2>Paso 2: Identificación del <span>Espacio Pedagógico</span></h2>
+
     <div class="grid2">
       <div>
-        <label class="required">Nombre del Espacio / Asignatura</label>
-        <input type="text" id="fAsignatura" value="${state.doc.asignatura}" placeholder="Ej: Metodología de la Investigación Educativa">
+        <label class="required">Facultad</label>
+        <select id="esp_facultad" onchange="onFacultadChange(this.value)">${facultadesOpts}</select>
+        <input type="text" id="esp_facultadOtro" style="margin-top:6px; display:${state.espacio.facultad === 'Otro' ? 'block':'none'};" placeholder="Escribe el nombre de la facultad" value="${escapeHtml(state.espacio.facultadOtro)}">
       </div>
       <div>
-        <label>Código de Asignatura</label>
-        <input type="text" id="fCodigo" value="${state.doc.codigo}" placeholder="Ej: FPM-101">
+        <label class="required">Departamento / Sección Académica</label>
+        <select id="esp_depto" onchange="onDeptoChange(this.value)">${deptosOpts}</select>
+        <input type="text" id="esp_deptoOtro" style="margin-top:6px; display:${state.espacio.depto === 'Otro' ? 'block':'none'};" placeholder="Escribe el departamento o sección" value="${escapeHtml(state.espacio.deptoOtro)}">
       </div>
     </div>
 
     <div class="grid2">
       <div>
-        <label>Período Académico</label>
-        <input type="text" id="fPeriodo" value="${state.doc.periodo}" placeholder="Ej: II Período 2026">
+        <label class="required">Nombre del Espacio Pedagógico</label>
+        <input type="text" id="esp_nombre" value="${escapeHtml(state.espacio.nombreEspacio)}" placeholder="Ej. Taller de Recursos Didácticos">
       </div>
       <div>
-        <label>Modalidad de Entrega</label>
-        <select id="fModalidad">
-          <option value="Virtual" ${state.doc.modalidad === 'Virtual' ? 'selected' : ''}>Virtual</option>
-          <option value="Híbrida / B-Learning" ${state.doc.modalidad === 'Híbrida / B-Learning' ? 'selected' : ''}>Híbrida / B-Learning</option>
-          <option value="A Distancia" ${state.doc.modalidad === 'A Distancia' ? 'selected' : ''}>A Distancia</option>
-        </select>
+        <label class="required">Código del Espacio</label>
+        <input type="text" id="esp_codigo" value="${escapeHtml(state.espacio.codigo)}" placeholder="Ej. TED-2004">
       </div>
     </div>
 
     <div class="grid2">
       <div>
-        <label>Facultad</label>
-        <input type="text" id="fFacultad" value="${state.doc.facultad}">
+        <label class="required">Periodo Académico</label>
+        <input type="text" id="esp_periodo" value="${escapeHtml(state.espacio.periodo)}" placeholder="Ej. III Periodo Académico 2026">
       </div>
       <div>
-        <label>Departamento Académico</label>
-        <input type="text" id="fDepartamento" value="${state.doc.departamento}">
-      </div>
-    </div>
-
-    <div class="grid2">
-      <div>
-        <label>Nombre del Docente / Diseñador</label>
-        <input type="text" id="fDocente" value="${state.doc.docente}" placeholder="Ej: Máster Juan Pérez">
-      </div>
-      <div>
-        <label>Correo Electrónico Institucional</label>
-        <input type="email" id="fEmail" value="${state.doc.emailDocente}" placeholder="ejemplo@upnfm.edu.hn">
+        <label class="required">Modalidad</label>
+        <select id="esp_modalidad">${modalidadesOpts}</select>
       </div>
     </div>
 
     <div class="grid2">
       <div>
-        <label>Unidades Valorativas / Créditos</label>
-        <input type="text" id="fCreditos" value="${state.doc.creditos}">
+        <label>Unidades Valorativas (UV)</label>
+        <input type="text" id="esp_uv" value="${escapeHtml(state.espacio.uv)}" placeholder="Ej. 3 UV">
       </div>
       <div>
-        <label>Duración en Semanas</label>
-        <input type="text" id="fSemanas" value="${state.doc.semanas}">
+        <label>Requisitos Académicos</label>
+        <input type="text" id="esp_requisitos" value="${escapeHtml(state.espacio.requisitos)}" placeholder="Ej. Ninguno">
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Fechas de Inicio y Fin</label>
+        <input type="text" id="esp_fechas" value="${escapeHtml(state.espacio.fechas)}" placeholder="Ej. Del 15 de Septiembre al 10 de Diciembre de 2026">
+      </div>
+      <div>
+        <label>Horario de la Clase</label>
+        <input type="text" id="esp_horario" value="${escapeHtml(state.espacio.horarioClase)}" placeholder="Ej. Sábados de 8:00 AM a 12:00 MD">
       </div>
     </div>
 
     <div class="nav-row">
-      <button class="btn-secondary" onclick="state.step=1; renderSteps(); renderContent();">← Paso Anterior</button>
-      <button class="btn-primary" onclick="guardarPaso2()">Continuar a Sílabo / Insumos →</button>
+      <button class="btn-secondary" onclick="state.step=1; render();">← Atrás</button>
+      <button class="btn-primary" onclick="guardarStep2()">Siguiente: Insumos de Contenido →</button>
     </div>
   `;
   container.appendChild(card);
 }
 
-function guardarPaso2(){
-  const asig = document.getElementById('fAsignatura').value.trim();
-  if(!asig){
-    state.error = 'El nombre del espacio pedagógico es obligatorio.';
-    renderContent();
+function onFacultadChange(fac){
+  state.espacio.facultad = fac;
+  const list = DEPARTAMENTOS_POR_FACULTAD[fac] || ["Otro"];
+  state.espacio.depto = list[0];
+  state.espacio.facultadOtro = '';
+  state.espacio.deptoOtro = '';
+  render();
+}
+
+function onDeptoChange(dep){
+  state.espacio.depto = dep;
+  const inp = document.getElementById('esp_deptoOtro');
+  if(inp) inp.style.display = dep === 'Otro' ? 'block' : 'none';
+}
+
+function guardarStep2(){
+  state.espacio.nombreEspacio = document.getElementById('esp_nombre').value.trim();
+  state.espacio.codigo = document.getElementById('esp_codigo').value.trim();
+  state.espacio.periodo = document.getElementById('esp_periodo').value.trim();
+  state.espacio.modalidad = document.getElementById('esp_modalidad').value;
+  state.espacio.uv = document.getElementById('esp_uv').value.trim();
+  state.espacio.requisitos = document.getElementById('esp_requisitos').value.trim();
+  state.espacio.fechas = document.getElementById('esp_fechas').value.trim();
+  state.espacio.horarioClase = document.getElementById('esp_horario').value.trim();
+  
+  if(document.getElementById('esp_facultadOtro')){
+    state.espacio.facultadOtro = document.getElementById('esp_facultadOtro').value.trim();
+  }
+  if(document.getElementById('esp_deptoOtro')){
+    state.espacio.deptoOtro = document.getElementById('esp_deptoOtro').value.trim();
+  }
+
+  if(!state.espacio.nombreEspacio || !state.espacio.codigo || !state.espacio.periodo){
+    state.error = 'Completa los campos requeridos del espacio (Nombre, Código y Periodo).';
+    render();
     return;
   }
-  state.doc.asignatura = asig;
-  state.doc.codigo = document.getElementById('fCodigo').value.trim();
-  state.doc.periodo = document.getElementById('fPeriodo').value.trim();
-  state.doc.modalidad = document.getElementById('fModalidad').value;
-  state.doc.facultad = document.getElementById('fFacultad').value.trim();
-  state.doc.departamento = document.getElementById('fDepartamento').value.trim();
-  state.doc.docente = document.getElementById('fDocente').value.trim();
-  state.doc.emailDocente = document.getElementById('fEmail').value.trim();
-  state.doc.creditos = document.getElementById('fCreditos').value.trim();
-  state.doc.semanas = document.getElementById('fSemanas').value.trim();
 
   state.error = null;
   state.step = 3;
-  renderSteps();
-  renderContent();
+  render();
 }
 
-// Paso 3: Insumos, Carga de Archivo y Planificación
+// Paso 3: Insumos, Carga de Archivos y Configuración Universal de IA
 function renderStep3(container){
   const card = document.createElement('div');
   card.className = 'card';
+
   card.innerHTML = `
-    <h2>Paso 3: Carga de <span>Sílabo / Planificación Didáctica</span></h2>
-    <p class="hint">Carga el programa de la asignatura en Word (.docx) o PDF para que la IA extraiga los contenidos, o redacta/pega los lineamientos clave.</p>
+    <h2>Paso 3: Descripción y <span>Documento de Referencia</span></h2>
+    <p class="hint">Puedes subir el programa oficial en PDF/Word (.docx) o escribir una descripción mínima (mínimo 15 caracteres si no subes archivo).</p>
 
     <div class="upload-box">
-      <label style="margin-top:0;">Subir archivo de sílabo o planificación (.docx / .pdf)</label>
-      <input type="file" id="fileInput" accept=".docx, .pdf" onchange="procesarArchivo(this)">
-      <div id="uploadStatus" class="upload-status" style="display:none;"></div>
-      <div id="uploadPreview" class="upload-preview" style="display:none;"></div>
+      <label style="margin-top:0;">Cargar Documento de Referencia (PDF o Word .docx)</label>
+      <input type="file" id="doc_file_input" accept=".docx, .pdf" onchange="handleFileUpload(this)">
+      <div id="fileUploadStatus" class="upload-status ${state.uploadedFile.status === 'ready' ? 'ready' : ''}" style="${state.uploadedFile.name ? 'display:block;' : 'display:none;'}">
+        ${state.uploadedFile.status === 'loading' ? 'Extrayendo texto del archivo...' : ''}
+        ${state.uploadedFile.status === 'ready' ? `✓ <strong>${escapeHtml(state.uploadedFile.name)}</strong>:${state.uploadedFile.text.length} caracteres extraídos.` : ''}
+        ${state.uploadedFile.status === 'error' ? `✕ Error: ${escapeHtml(state.uploadedFile.error)}` : ''}
+      </div>
+      <div id="filePreview" class="upload-preview" style="${state.uploadedFile.text ? 'display:block;' : 'display:none;'}">
+        ${escapeHtml(state.uploadedFile.text.slice(0, 500))}${state.uploadedFile.text.length > 500 ? '...' : ''}
+      </div>
+      ${state.uploadedFile.name ? `<button type="button" class="btn-outline" style="margin-top:8px; padding:6px 14px; font-size:12px;" onclick="removeUploadedFile()">✕ Quitar archivo</button>` : ''}
     </div>
 
-    <div class="divider-or">O BIEN INGRESA LA INFORMACIÓN MANUALMENTE</div>
+    <label style="margin-top:20px;">Descripción mínima / Indicaciones adicionales para la IA</label>
+    <textarea id="txt_descripcion" placeholder="Escribe aquí los temas clave, enfoque metodológico o actividades esperadas...">${escapeHtml(state.descripcion)}</textarea>
 
-    <label>Presentación y Descripción del Espacio</label>
-    <textarea id="fPresentacion" placeholder="Breve introducción y fundamentación del curso...">${state.doc.presentacion}</textarea>
+    <!-- Configuración Universal de IA -->
+    <details class="config-box">
+      <summary>⚙️ Configuración del Proveedor de Inteligencia Artificial</summary>
+      <div style="margin-top:14px;">
+        <label>Proveedor de IA</label>
+        <select id="ia_provider" onchange="onProviderSelect(this.value)">
+          <option value="anthropic" ${state.apiProvider === 'anthropic' ? 'selected':''}>Anthropic (Claude)</option>
+          <option value="openai" ${state.apiProvider === 'openai' ? 'selected':''}>OpenAI (ChatGPT)</option>
+          <option value="gemini" ${state.apiProvider === 'gemini' ? 'selected':''}>Google Gemini</option>
+          <option value="compatible" ${state.apiProvider === 'compatible' ? 'selected':''}>Compatible OpenAI (DeepSeek, Groq, OpenRouter...)</option>
+        </select>
 
-    <label>Competencias Genéricas y Específicas</label>
-    <textarea id="fCompetencias" placeholder="Competencias que alcanzará el estudiante al concluir el espacio formativo...">${state.doc.competencias}</textarea>
+        <div id="divBaseUrl" style="display:${state.apiProvider === 'compatible' ? 'block' : 'none'}; margin-top:8px;">
+          <label>Base URL de la API</label>
+          <input type="text" id="ia_baseUrl" value="${escapeHtml(state.apiBaseUrl)}" placeholder="https://api.deepseek.com/v1">
+        </div>
 
-    <label>Metodología y Estrategias Formativas</label>
-    <textarea id="fMetodologia" placeholder="Enfoque metodológico, aprendizaje basado en proyectos, casos, etc...">${state.doc.metodologia}</textarea>
-
-    <label>Criterios y Sistema de Evaluación</label>
-    <textarea id="fEvaluacion" placeholder="Evaluaciones diagnósticas, formativas y sumativas...">${state.doc.evaluacion}</textarea>
+        <div class="grid2" style="margin-top:8px;">
+          <div>
+            <label>Modelo</label>
+            <input type="text" id="ia_model" value="${escapeHtml(state.apiModel)}">
+          </div>
+          <div>
+            <label>API Key</label>
+            <input type="password" id="ia_key" value="${escapeHtml(state.apiKey)}" placeholder="Pega tu API Key aquí">
+          </div>
+        </div>
+        <div style="margin-top:10px; text-align:right;">
+          <button type="button" class="btn-secondary" style="padding:7px 16px; font-size:12px;" onclick="guardarConfigIA()">💾 Guardar Configuración</button>
+        </div>
+      </div>
+    </details>
 
     <div class="nav-row">
-      <button class="btn-secondary" onclick="state.step=2; renderSteps(); renderContent();">← Paso Anterior</button>
-      <button class="btn-primary" onclick="generarGuia()">Generar Guía Metodológica Completa ⚡</button>
+      <button class="btn-secondary" onclick="state.step=2; render();">← Atrás</button>
+      <button class="btn-primary" onclick="dispararGeneracionIA()">Generar guión con IA ✨</button>
     </div>
   `;
   container.appendChild(card);
 }
 
-// Extracción de texto desde DOCX y PDF en el cliente
-async function procesarArchivo(input){
+function onProviderSelect(prov){
+  state.apiProvider = prov;
+  const baseUrlDiv = document.getElementById('divBaseUrl');
+  const modelInput = document.getElementById('ia_model');
+
+  if(prov === 'anthropic'){
+    baseUrlDiv.style.display = 'none';
+    modelInput.value = 'claude-3-5-sonnet-20241022';
+  } else if(prov === 'openai'){
+    baseUrlDiv.style.display = 'none';
+    modelInput.value = 'gpt-4o';
+  } else if(prov === 'gemini'){
+    baseUrlDiv.style.display = 'none';
+    modelInput.value = 'gemini-1.5-pro';
+  } else if(prov === 'compatible'){
+    baseUrlDiv.style.display = 'block';
+    modelInput.value = 'deepseek-chat';
+  }
+}
+
+function guardarConfigIA(){
+  state.apiProvider = document.getElementById('ia_provider').value;
+  state.apiKey = document.getElementById('ia_key').value.trim();
+  state.apiModel = document.getElementById('ia_model').value.trim();
+  const bUrl = document.getElementById('ia_baseUrl');
+  if(bUrl) state.apiBaseUrl = bUrl.value.trim();
+
+  localStorage.setItem('gm_universal_provider', state.apiProvider);
+  localStorage.setItem('gm_universal_key', state.apiKey);
+  localStorage.setItem('gm_universal_model', state.apiModel);
+  localStorage.setItem('gm_universal_baseurl', state.apiBaseUrl);
+  alert('Configuración guardada correctamente.');
+}
+
+// Extracción de Texto de Archivos (Mammoth y PDF.js)
+async function handleFileUpload(input){
   const file = input.files[0];
   if(!file) return;
 
-  const statusEl = document.getElementById('uploadStatus');
-  const previewEl = document.getElementById('uploadPreview');
-
-  statusEl.style.display = 'block';
-  statusEl.className = 'upload-status loading';
-  statusEl.textContent = `Procesando "${file.name}"...`;
-  previewEl.style.display = 'none';
+  state.uploadedFile = { name: file.name, text: '', status: 'loading', error: '' };
+  render();
 
   try{
-    let texto = '';
-    if(file.name.toLowerCase().endsWith('.docx')){
-      if(!window.mammoth) throw new Error("Librería Mammoth no disponible.");
-      const arrayBuffer = await file.arrayBuffer();
-      const res = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-      texto = res.value;
-    } else if(file.name.toLowerCase().endsWith('.pdf')){
-      if(!window.pdfjsLib) throw new Error("Librería PDF.js no disponible.");
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let paginasTexto = [];
-      for(let i = 1; i <= pdf.numPages; i++){
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const buffer = await file.arrayBuffer();
+    let text = '';
+
+    if(ext === 'docx'){
+      const res = await window.mammoth.extractRawText({ arrayBuffer: buffer });
+      text = (res.value || '').trim();
+    } else if(ext === 'pdf'){
+      const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+      let full = '';
+      for(let i=1; i<=pdf.numPages; i++){
         const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const str = textContent.items.map(item => item.str).join(' ');
-        paginasTexto.push(str);
+        const content = await page.getTextContent();
+        full += content.items.map(it => it.str).join(' ') + '\n\n';
       }
-      texto = paginasTexto.join('\n\n');
+      text = full.trim();
+    } else if(ext === 'doc'){
+      throw new Error('Formato .doc antiguo no soportado en navegador; convertir a .docx o PDF.');
     } else {
-      throw new Error("Formato no compatible. Por favor sube un archivo .docx o .pdf");
+      throw new Error('Formato no compatible. Sube PDF o Word (.docx).');
     }
 
-    state.doc.textoAnalizado = texto;
-    state.doc.archivoNombre = file.name;
-
-    statusEl.className = 'upload-status ready';
-    statusEl.textContent = `✓ Archivo "${file.name}" cargado exitosamente (${texto.length} caracteres leídos).`;
-    previewEl.style.display = 'block';
-    previewEl.textContent = texto.substring(0, 500) + (texto.length > 500 ? '...\n[Texto truncado para vista previa]' : '');
-
-    // Autocompletar campos si están vacíos con un extracto
-    if(!document.getElementById('fPresentacion').value){
-      document.getElementById('fPresentacion').value = `Información extraída del archivo adjunto ${file.name}.`;
-    }
-  }catch(e){
-    statusEl.className = 'upload-status';
-    statusEl.style.color = '#8A2E0C';
-    statusEl.textContent = `Error al procesar archivo: ${e.message}`;
+    state.uploadedFile.status = 'ready';
+    state.uploadedFile.text = text;
+    state.error = null;
+  }catch(err){
+    state.uploadedFile.status = 'error';
+    state.uploadedFile.error = err.message;
   }
+  render();
 }
 
-// CAPA UNIVERSAL DE LLAMADAS IA
-async function ejecutarLlamadaIA(prompt, systemMsg){
-  const { provider, apiKey, model, baseUrl } = state.config;
-
-  if(provider === 'anthropic'){
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: model || 'claude-3-5-sonnet-20241022',
-        max_tokens: 4000,
-        system: systemMsg,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    if(!resp.ok){
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Error ${resp.status} en Anthropic API`);
-    }
-    const data = await resp.json();
-    return data.content[0].text;
-  }
-
-  if(provider === 'openai' || provider === 'compatible'){
-    const endpoint = provider === 'openai' 
-      ? 'https://api.openai.com/v1/chat/completions' 
-      : `${baseUrl.replace(/\/$/, '')}/chat/completions`;
-
-    const resp = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: model || 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemMsg },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7
-      })
-    });
-    if(!resp.ok){
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Error ${resp.status} en API`);
-    }
-    const data = await resp.json();
-    return data.choices[0].message.content;
-  }
-
-  if(provider === 'gemini'){
-    const cleanModel = model || 'gemini-1.5-pro';
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`;
-    const resp = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemMsg }] },
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 4000 }
-      })
-    });
-    if(!resp.ok){
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Error ${resp.status} en Gemini API`);
-    }
-    const data = await resp.json();
-    return data.candidates[0].content.parts[0].text;
-  }
-
-  throw new Error("Proveedor de Inteligencia Artificial no soportado.");
+function removeUploadedFile(){
+  state.uploadedFile = { name: '', text: '', status: 'idle', error: '' };
+  render();
 }
 
-function limpiarYParsearJSON(texto){
-  let t = texto.trim();
-  if(t.startsWith("```")){
-    t = t.replace(/^```[a-z]*\n/i, "").replace(/```$/g, "").trim();
-  }
-  return JSON.parse(t);
-}
+// 7. Integración con IA Universal
+function buildPrompt(){
+  const fac = getFacultadFinal();
+  const dep = getDeptoFinal();
+  const fileContent = state.uploadedFile.text ? state.uploadedFile.text.slice(0, 12000) : '';
 
-// Orquestación y Generación de la Guía Metodológica
-async function generarGuia(){
-  state.doc.presentacion = document.getElementById('fPresentacion').value.trim();
-  state.doc.competencias = document.getElementById('fCompetencias').value.trim();
-  state.doc.metodologia = document.getElementById('fMetodologia').value.trim();
-  state.doc.evaluacion = document.getElementById('fEvaluacion').value.trim();
+  return `Eres un experto en diseño curricular y educación virtual universitaria de la Universidad Pedagógica Nacional Francisco Morazán (UPNFM).
+Debes elaborar la GUÍA METODOLÓGICA oficial completa y formal para el siguiente espacio formativo:
 
-  state.loading = true;
-  state.loadingMsg = `Conectando con ${state.config.provider.toUpperCase()} (${state.config.model}) para construir la Guía Metodológica...`;
-  renderContent();
+DATOS INSTITUCIONALES Y DOCENTE:
+- Facultad: ${fac}
+- Departamento/Sección: ${dep}
+- Espacio Pedagógico: ${state.espacio.nombreEspacio}
+- Código: ${state.espacio.codigo}
+- Unidades Valorativas: ${state.espacio.uv}
+- Modalidad: ${state.espacio.modalidad}
+- Periodo Académico: ${state.espacio.periodo}
+- Requisitos: ${state.espacio.requisitos}
+- Fechas del Curso: ${state.espacio.fechas}
+- Horario: ${state.espacio.horarioClase}
+- Docente Responsable: ${state.docente.nombre}
+- Email Docente: ${state.docente.email}
+- Horario de Atención: ${state.docente.horarioAtencion}
 
-  const systemMsg = "Eres un especialista senior en diseño instruccional y mediación pedagógica universitaria virtual de la Universidad Pedagógica Nacional Francisco Morazán (UPNFM). Tu misión es elaborar la Guía Metodológica Oficial del espacio pedagógico en formato estructurado JSON.";
+${fileContent ? `\nCONTENIDO EXTRAÍDO DEL DOCUMENTO FUENTE (USAR COMO FUENTE PRINCIPAL):\n"""\n${fileContent}\n"""\n` : ''}
+${state.descripcion ? `\nDESCRIPCIÓN / INDICACIONES COMPLEMENTARIAS:\n"""\n${state.descripcion}\n"""\n` : ''}
 
-  const userPrompt = `A partir de la siguiente información curricular y pedagógica, elabora la GUÍA METODOLÓGICA del espacio pedagógico:
+INSTRUCCIONES PEDAGÓGICAS ESTRICTAS:
+1. Redacción académica, formal y de nivel universitario acorde a las directrices de la UPNFM.
+2. planificacion_semanal: debe contener entre 3 y 6 filas representando las unidades y semanas temáticas.
+3. encuentros_tutoriales: debe contener entre 3 y 5 encuentros de acompañamiento tutorial sincrónicos o presenciales.
+4. criterios_acreditacion: debe contener entre 4 y 8 actividades evaluativas. Los porcentajes DEBEN SUMAR EXACTAMENTE 100%.
+5. Responde ÚNICAMENTE con un objeto JSON válido (sin texto antes ni después, sin delimitadores extras de markdown).
 
-DATOS GENERALES:
-- Espacio: ${state.doc.asignatura}
-- Código: ${state.doc.codigo}
-- Modalidad: ${state.doc.modalidad}
-- Período: ${state.doc.periodo}
-- Docente: ${state.doc.docente}
-- UV/Créditos: ${state.doc.creditos}
-- Semanas: ${state.doc.semanas}
-
-INSUMOS / DESCRIPCIÓN:
-- Presentación: ${state.doc.presentacion}
-- Competencias: ${state.doc.competencias}
-- Metodología: ${state.doc.metodologia}
-- Evaluación: ${state.doc.evaluacion}
-${state.doc.textoAnalizado ? `\nCONTENIDO EXTRAÍDO DEL DOCUMENTO:\n${state.doc.textoAnalizado.substring(0, 4500)}` : ''}
-
-Debes responder ÚNICAMENTE con un JSON válido (sin texto antes ni después) con exactamente la siguiente estructura:
+ESQUEMA JSON OBLIGATORIO:
 {
-  "introduccion": "Texto detallado y motivador de bienvenida y presentación...",
-  "competencias": [
-    "Competencia 1...",
-    "Competencia 2...",
-    "Competencia 3..."
+  "descripcion_espacio": "Descripción ampliada y profesional del espacio formativo (2 a 4 párrafos)",
+  "saberes_previos": "Saberes y experiencias previas esperadas del estudiante (1 a 2 párrafos)",
+  "competencias_genericas": "Competencias genéricas y específicas a desarrollar, redactado en párrafo(s)",
+  "subcompetencias": "Sub-competencia 1\\nSub-competencia 2\\nSub-competencia 3\\nSub-competencia 4",
+  "contenidos": "Unidad 1: Nombre de Unidad\\n- Contenido 1\\n- Contenido 2\\nUnidad 2: Nombre de Unidad\\n- Contenido 1",
+  "metodologia_trabajo": "Metodología de trabajo en clase, incluyendo criterios de asistencia y expectativas en encuentros sincrónicos",
+  "metodologia_evaluacion": "Metodología de evaluación",
+  "documentos_materiales": "Documento 1\\nDocumento 2\\nDocumento 3\\nDocumento 4",
+  "planificacion_semanal": [
+    {
+      "unidad": "Unidad I",
+      "temas": "Temas semanales...",
+      "competencias": "Competencias específicas...",
+      "contenidos": "Contenidos conceptuales y procedimentales...",
+      "materiales": "Audios, videos, lecturas, guías...",
+      "actividades": "Actividades de aprendizaje...",
+      "criterios": "Criterios de aprobación y ponderación..."
+    }
   ],
-  "metodologia": "Explicación del modelo pedagógico virtual, rol del estudiante y rol docente...",
-  "evaluacion": "Criterios y políticas de entrega...",
-  "unidades": [
+  "encuentros_tutoriales": [
     {
-      "semana": "Semana 1 - 2",
-      "unidad": "Unidad I: Nombre de la Unidad",
-      "contenidos": "Temas principales a abordar...",
-      "actividades": "Actividades de aprendizaje y tareas prácticas...",
-      "recursos": "Lecturas, videos y herramientas virtuales...",
-      "evaluacion": "Evidencia de aprendizaje y ponderación"
-    },
+      "encuentro": "Encuentro 1",
+      "fecha": "Semana 2",
+      "unidades_temas": "Unidad I: Fundamentos...",
+      "actividades": "Presentación, encuadre pedagógico y plenaria..."
+    }
+  ],
+  "criterios_acreditacion": [
     {
-      "semana": "Semana 3 - 4",
-      "unidad": "Unidad II: Nombre de la Unidad",
-      "contenidos": "...",
-      "actividades": "...",
-      "recursos": "...",
-      "evaluacion": "..."
-    },
-    {
-      "semana": "Semana 5 - 6",
-      "unidad": "Unidad III: Nombre de la Unidad",
-      "contenidos": "...",
-      "actividades": "...",
-      "recursos": "...",
-      "evaluacion": "..."
+      "actividad": "Foro de debate académico",
+      "porcentaje": "15%",
+      "criterios": "Rúbrica de participación fundamentada"
     }
   ]
 }`;
+}
+
+// Parseo defensivo y saneamiento JSON
+function sanitizeJsonRawControlChars(str){
+  let result = '';
+  let inString = false;
+  for(let i = 0; i < str.length; i++){
+    const c = str[i];
+    if(c === '"' && (i === 0 || str[i-1] !== '\\')){
+      inString = !inString;
+      result += c;
+    } else if(inString){
+      if(c === '\n') result += '\\n';
+      else if(c === '\r') {} // ignorar retorno de carro
+      else if(c === '\t') result += '\\t';
+      else result += c;
+    } else {
+      result += c;
+    }
+  }
+  return result;
+}
+
+function extractJsonBlock(str){
+  const first = str.indexOf('{');
+  const last = str.lastIndexOf('}');
+  if(first !== -1 && last !== -1 && last > first){
+    return str.slice(first, last + 1);
+  }
+  return str;
+}
+
+function tryParseJson(rawText){
+  const cleaned = rawText.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+  const block = extractJsonBlock(cleaned);
+  try{ return JSON.parse(block); }catch(e1){}
+  try{ return JSON.parse(sanitizeJsonRawControlChars(block)); }catch(e2){}
+  return JSON.parse(sanitizeJsonRawControlChars(block));
+}
+
+// Ejecución Universal Multi-IA
+async function dispararGeneracionIA(){
+  const descEl = document.getElementById('txt_descripcion');
+  if(descEl) state.descripcion = descEl.value.trim();
+
+  const keyEl = document.getElementById('ia_key');
+  if(keyEl && keyEl.value.trim()) state.apiKey = keyEl.value.trim();
+
+  // Validación: archivo con texto o descripción >= 15 chars
+  const tieneArchivoValido = state.uploadedFile.status === 'ready' && state.uploadedFile.text.length > 20;
+  const tieneDescripcion = state.descripcion.length >= 15;
+
+  if(!tieneArchivoValido && !tieneDescripcion){
+    state.error = 'Debes subir un archivo con texto válido o escribir al menos 15 caracteres en la descripción mínima.';
+    render();
+    return;
+  }
+
+  if(!state.apiKey){
+    state.error = 'Se requiere una API Key configurada para realizar la generación con IA.';
+    render();
+    return;
+  }
+
+  state.loading = true;
+  state.error = null;
+  render();
+
+  const prompt = buildPrompt();
 
   try{
-    const raw = await ejecutarLlamadaIA(userPrompt, systemMsg);
-    const parsed = limpiarYParsearJSON(raw);
-    state.guiaGenerada = parsed;
+    let rawText = '';
+    const { apiProvider, apiKey, apiModel, apiBaseUrl } = state;
+
+    if(apiProvider === 'anthropic'){
+      const headers = {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      };
+      const resp = await fetch("[https://api.anthropic.com/v1/messages](https://api.anthropic.com/v1/messages)", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: apiModel || "claude-3-5-sonnet-20241022",
+          max_tokens: 8000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      if(!resp.ok){
+        const errJson = await resp.json().catch(()=>({}));
+        throw new Error(errJson.error?.message || `Error HTTP ${resp.status} de Anthropic`);
+      }
+      const data = await resp.json();
+      if(data.stop_reason === 'max_tokens'){
+        throw new Error('La respuesta fue truncada por límite de tokens. Intenta con una descripción más concisa.');
+      }
+      rawText = data.content[0].text;
+    } else if(apiProvider === 'openai' || apiProvider === 'compatible'){
+      const endpoint = apiProvider === 'openai' 
+        ? "[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)"
+        : `${apiBaseUrl.replace(/\/$/, '')}/chat/completions`;
+
+      const resp = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: apiModel || "gpt-4o",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7
+        })
+      });
+      if(!resp.ok){
+        const errJson = await resp.json().catch(()=>({}));
+        throw new Error(errJson.error?.message || `Error HTTP ${resp.status} de la API`);
+      }
+      const data = await resp.json();
+      rawText = data.choices[0].message.content;
+    } else if(apiProvider === 'gemini'){
+      const endpoint = `[https://generativelanguage.googleapis.com/v1beta/models/$](https://generativelanguage.googleapis.com/v1beta/models/$){apiModel || 'gemini-1.5-pro'}:generateContent?key=${apiKey}`;
+      const resp = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 8000, temperature: 0.7 }
+        })
+      });
+      if(!resp.ok){
+        const errJson = await resp.json().catch(()=>({}));
+        throw new Error(errJson.error?.message || `Error HTTP ${resp.status} de Gemini`);
+      }
+      const data = await resp.json();
+      rawText = data.candidates[0].content.parts[0].text;
+    }
+
+    const parsedJson = tryParseJson(rawText);
+    state.generated = parsedJson;
     state.step = 4;
-  }catch(e){
-    state.error = 'Ocurrió un error al generar la guía: ' + e.message;
+  }catch(err){
+    state.error = `Fallo en la generación con IA: ${err.message}`;
   }finally{
     state.loading = false;
-    renderSteps();
-    renderContent();
+    render();
   }
 }
 
-// Paso 4: Visualización Idéntica y Exportación Word / PDF
+// Paso 4: Vista Previa y Exportación (.doc y PDF)
+function toListOrParagraph(str){
+  if(!str) return '<p></p>';
+  const lines = str.split('\n').map(l => l.replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean);
+  if(lines.length > 1){
+    return `<ul class="doc-list">${lines.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`;
+  }
+  return `<p>${escapeHtml(str)}</p>`;
+}
+
 function renderStep4(container){
   const card = document.createElement('div');
   card.className = 'card';
 
-  const g = state.guiaGenerada;
-  const d = state.doc;
+  const g = state.generated || {};
+  const d = state.docente;
+  const e = state.espacio;
+  const facFinal = getFacultadFinal();
+  const depFinal = getDeptoFinal();
 
-  let unidadesTr = '';
-  if(g && g.unidades){
-    unidadesTr = g.unidades.map(u => `
-      <tr>
-        <td style="font-weight:700; color:var(--azul-principal);">${escapeHtml(u.semana)}</td>
-        <td><strong>${escapeHtml(u.unidad)}</strong><br><small style="color:#555;">${escapeHtml(u.contenidos)}</small></td>
-        <td>${escapeHtml(u.actividades)}</td>
-        <td>${escapeHtml(u.recursos)}</td>
-        <td><span class="pill">${escapeHtml(u.evaluacion)}</span></td>
-      </tr>
-    `).join('');
-  }
+  // Tablas del documento
+  const filasPlanificacion = (g.planificacion_semanal || []).map(row => `
+    <tr>
+      <td style="font-weight:bold;">${escapeHtml(row.unidad)}</td>
+      <td>${escapeHtml(row.temas)}</td>
+      <td>${escapeHtml(row.competencias)}</td>
+      <td>${escapeHtml(row.contenidos)}</td>
+      <td>${escapeHtml(row.materiales)}</td>
+      <td>${escapeHtml(row.actividades)}</td>
+      <td>${escapeHtml(row.criterios)}</td>
+    </tr>
+  `).join('');
+
+  const filasEncuentros = (g.encuentros_tutoriales || []).map(row => `
+    <tr>
+      <td style="font-weight:bold;">${escapeHtml(row.encuentro)}</td>
+      <td>${escapeHtml(row.fecha)}</td>
+      <td>${escapeHtml(row.unidades_temas)}</td>
+      <td>${escapeHtml(row.actividades)}</td>
+    </tr>
+  `).join('');
+
+  const filasCriterios = (g.criterios_acreditacion || []).map(row => `
+    <tr>
+      <td>${escapeHtml(row.actividad)}</td>
+      <td style="font-weight:bold; text-align:center;">${escapeHtml(row.porcentaje)}</td>
+      <td>${escapeHtml(row.criterios)}</td>
+    </tr>
+  `).join('');
 
   card.innerHTML = `
     <h2>Paso 4: <span>Guía Metodológica Generada</span></h2>
-    
+
     <div class="export-bar no-print">
-      <button class="btn-primary" onclick="window.print()">🖨️ Imprimir / Guardar en PDF</button>
-      <button class="btn-gold" onclick="descargarWord()">📄 Descargar en Word (.doc)</button>
-      <button class="btn-outline" onclick="state.step=3; renderSteps(); renderContent();">← Modificar Insumos</button>
+      <button class="btn-secondary" onclick="state.step=3; render();">← Editar datos</button>
+      <button class="btn-outline" onclick="dispararGeneracionIA()">↻ Regenerar con IA</button>
+      <button class="btn-gold" onclick="exportToDoc()">📄 Descargar como Word (.doc)</button>
+      <button class="btn-primary" onclick="exportToPdf(this)">🖨️ Exportar a PDF</button>
     </div>
 
-    <div style="margin-top:24px;">
-      <!-- Estructura visual original de la Guía -->
-      <div class="doc-wrap" id="documentoGuia">
+    <div class="doc-wrap" id="docCompleto">
+      <!-- Sección Vertical (Portada + Secciones de Texto) -->
+      <div id="docPortraitSection">
         <div class="doc-header">
           <h2>UNIVERSIDAD PEDAGÓGICA NACIONAL FRANCISCO MORAZÁN</h2>
-          <h3>VICERRECTORÍA ACADÉMICA · PROGRAMA DE EDUCACIÓN VIRTUAL</h3>
-          <h3>${escapeHtml(d.facultad).toUpperCase()}</h3>
-          <h3>DEPARTAMENTO DE ${escapeHtml(d.departamento).toUpperCase()}</h3>
-          <div class="titulo-guia">GUÍA METODOLÓGICA DE APRENDIZAJE</div>
-          <div style="font-size:15px; color:#CFE0F5; margin-top:4px;">${escapeHtml(d.asignatura).toUpperCase()}</div>
+          <h3>VICERRECTORÍA ACADÉMICA / VICERRECTORÍA DE EDUCACIÓN A DISTANCIA</h3>
+          <h3>PROGRAMA DE EDUCACIÓN VIRTUAL</h3>
+          <div class="titulo-guia">GUÍA METODOLÓGICA</div>
+          <div style="font-size:15px; color:#CFE0F5; margin-top:6px; font-weight:bold;">
+            ${escapeHtml(e.nombreEspacio).toUpperCase()} (${escapeHtml(e.codigo)})
+          </div>
         </div>
 
         <div class="doc-body">
           <div class="doc-section">
-            <h4>I. DATOS DE IDENTIFICACIÓN</h4>
+            <h4>1. IDENTIFICACIÓN DEL ESPACIO PEDAGÓGICO</h4>
             <div class="accent-bar"></div>
             <table class="doc-table identif">
               <tr>
+                <td class="label">Facultad:</td>
+                <td>${escapeHtml(facFinal)}</td>
+                <td class="label">Departamento/Sección:</td>
+                <td>${escapeHtml(depFinal)}</td>
+              </tr>
+              <tr>
                 <td class="label">Espacio Pedagógico:</td>
-                <td><strong>${escapeHtml(d.asignatura)}</strong></td>
-                <td class="label">Código:</td>
-                <td>${escapeHtml(d.codigo || 'N/D')}</td>
+                <td><strong>${escapeHtml(e.nombreEspacio)}</strong> (${escapeHtml(e.codigo)}) - ${escapeHtml(e.uv)} UV</td>
+                <td class="label">Periodo Académico:</td>
+                <td>${escapeHtml(e.periodo)}</td>
               </tr>
               <tr>
+                <td class="label">Requisitos:</td>
+                <td>${escapeHtml(e.requisitos || 'Ninguno')}</td>
                 <td class="label">Modalidad:</td>
-                <td>${escapeHtml(d.modalidad)}</td>
-                <td class="label">Período Académico:</td>
-                <td>${escapeHtml(d.periodo || 'I Período')}</td>
+                <td>${escapeHtml(e.modalidad)}</td>
               </tr>
               <tr>
-                <td class="label">Unidades Valorativas:</td>
-                <td>${escapeHtml(d.creditos)} UV</td>
-                <td class="label">Duración:</td>
-                <td>${escapeHtml(d.semanas)} semanas</td>
+                <td class="label">Fechas del Espacio:</td>
+                <td>${escapeHtml(e.fechas || 'Según calendario académico')}</td>
+                <td class="label">Horario de la Clase:</td>
+                <td>${escapeHtml(e.horarioClase || 'Asincrónico')}</td>
               </tr>
               <tr>
-                <td class="label">Profesor(a) Responsable:</td>
-                <td>${escapeHtml(d.docente || 'Equipo Docente')}</td>
-                <td class="label">Correo Electrónico:</td>
-                <td>${escapeHtml(d.emailDocente || 'virtual@upnfm.edu.hn')}</td>
+                <td class="label">Profesor(a):</td>
+                <td><strong>${escapeHtml(d.nombre)}</strong></td>
+                <td class="label">Email del Profesor(a):</td>
+                <td>${escapeHtml(d.email)}</td>
+              </tr>
+              <tr>
+                <td class="label">Atención a Consultas:</td>
+                <td colspan="3">${escapeHtml(d.horarioAtencion)}</td>
               </tr>
             </table>
           </div>
 
           <div class="doc-section">
-            <h4>II. INTRODUCCIÓN Y PRESENTACIÓN</h4>
+            <h4>DESCRIPCIÓN DEL ESPACIO FORMATIVO</h4>
             <div class="accent-bar"></div>
-            <p>${escapeHtml(g?.introduccion || d.presentacion)}</p>
+            <p>${escapeHtml(g.descripcion_espacio || '')}</p>
           </div>
 
           <div class="doc-section">
-            <h4>III. COMPETENCIAS DEL ESPACIO PEDAGÓGICO</h4>
+            <h4>SABERES Y EXPERIENCIAS PREVIAS</h4>
             <div class="accent-bar"></div>
-            <ul class="doc-list">
-              ${(g?.competencias || []).map(c => `<li>${escapeHtml(c)}</li>`).join('')}
-            </ul>
+            <p>${escapeHtml(g.saberes_previos || '')}</p>
           </div>
 
           <div class="doc-section">
-            <h4>IV. METODOLOGÍA Y ORIENTACIONES PARA EL APRENDIZAJE</h4>
+            <h4>COMPETENCIAS GENÉRICAS Y ESPECÍFICAS POR DESARROLLAR</h4>
             <div class="accent-bar"></div>
-            <p>${escapeHtml(g?.metodologia || d.metodologia)}</p>
+            <p>${escapeHtml(g.competencias_genericas || '')}</p>
+            <div style="font-weight:700; color:var(--azul-principal); margin:12px 0 6px;">Sub-competencias:</div>
+            ${toListOrParagraph(g.subcompetencias)}
           </div>
 
           <div class="doc-section">
-            <h4>V. PLANIFICACIÓN DIDÁCTICA MODULAR</h4>
+            <h4>CONTENIDOS</h4>
             <div class="accent-bar"></div>
-            <table class="doc-table">
-              <thead>
-                <tr>
-                  <th style="width:12%;">Semana</th>
-                  <th style="width:28%;">Unidad y Contenidos</th>
-                  <th style="width:26%;">Actividades de Aprendizaje</th>
-                  <th style="width:18%;">Recursos y Medios</th>
-                  <th style="width:16%;">Evaluación</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${unidadesTr}
-              </tbody>
-            </table>
+            ${toListOrParagraph(g.contenidos)}
           </div>
 
           <div class="doc-section">
-            <h4>VI. POLÍTICAS DE EVALUACIÓN Y ACREDITACIÓN</h4>
+            <h4>METODOLOGÍA DE TRABAJO EN CLASE</h4>
             <div class="accent-bar"></div>
-            <p>${escapeHtml(g?.evaluacion || d.evaluacion)}</p>
+            <p>${escapeHtml(g.metodologia_trabajo || '')}</p>
           </div>
 
-          <div class="doc-footer">
-            Universidad Pedagógica Nacional Francisco Morazán (UPNFM) · Formando los líderes de la educación
+          <div class="doc-section">
+            <h4>METODOLOGÍA DE EVALUACIÓN</h4>
+            <div class="accent-bar"></div>
+            <p>${escapeHtml(g.metodologia_evaluacion || '')}</p>
           </div>
+
+          <div class="doc-section">
+            <h4>DOCUMENTOS / MATERIALES A UTILIZAR</h4>
+            <div class="accent-bar"></div>
+            ${toListOrParagraph(g.documentos_materiales)}
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección Horizontal (Tablas de Planificación) -->
+      <div id="docLandscapeSection" class="doc-body page-break" style="padding-top:0;">
+        <div class="doc-section">
+          <h4>I. PLANIFICACIÓN SEMANAL</h4>
+          <div class="accent-bar"></div>
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th>Unidades</th>
+                <th>Temas Semanales</th>
+                <th>Competencias Específicas</th>
+                <th>Contenidos</th>
+                <th>Materiales Didácticos</th>
+                <th>Actividades de Aprendizaje</th>
+                <th>Criterios y Ponderación</th>
+              </tr>
+            </thead>
+            <tbody>${filasPlanificacion}</tbody>
+          </table>
+        </div>
+
+        <div class="doc-section">
+          <h4>II. PLANIFICACIÓN ENCUENTROS DE ACOMPAÑAMIENTO TUTORIAL</h4>
+          <div class="accent-bar"></div>
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th>Encuentros</th>
+                <th>Fechas</th>
+                <th>Unidades y Temas</th>
+                <th>Actividades a Desarrollar Durante el Encuentro</th>
+              </tr>
+            </thead>
+            <tbody>${filasEncuentros}</tbody>
+          </table>
+        </div>
+
+        <div class="doc-section">
+          <h4>CRITERIOS DE ACREDITACIÓN / VALORACIÓN</h4>
+          <div class="accent-bar"></div>
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th>Actividades de Aprendizaje</th>
+                <th style="text-align:center;">Porcentaje (%)</th>
+                <th>Criterios de Acreditación</th>
+              </tr>
+            </thead>
+            <tbody>${filasCriterios}</tbody>
+          </table>
+        </div>
+
+        <div class="doc-footer">
+          Universidad Pedagógica Nacional Francisco Morazán (UPNFM) · Guía Metodológica Institucional
         </div>
       </div>
     </div>
@@ -1112,90 +1349,195 @@ function renderStep4(container){
   container.appendChild(card);
 }
 
-// Descarga en formato Microsoft Word (.doc) respetando el diseño institucional
-function descargarWord(){
-  if(!state.guiaGenerada) return;
-  const d = state.doc;
-  const g = state.guiaGenerada;
-  const nombreLimpio = (d.asignatura || 'Guia_Metodologica').replace(/[^a-z0-9áéíóúñ]+/gi,'_');
+// 9. Exportación a Word (.doc) con Secciones Retrato/Paisaje
+function exportToDoc(){
+  const portraitHTML = document.getElementById('docPortraitSection').innerHTML;
+  const landscapeHTML = document.getElementById('docLandscapeSection').innerHTML;
+  const cleanName = (state.espacio.nombreEspacio || 'Guia_Metodologica').replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+/g, '_');
 
-  let rowsWord = (g.unidades || []).map(u => `
-    <tr>
-      <td style="border:1px solid #0E408B; padding:8px; font-weight:bold;">${escapeHtml(u.semana)}</td>
-      <td style="border:1px solid #0E408B; padding:8px;"><strong>${escapeHtml(u.unidad)}</strong><br>${escapeHtml(u.contenidos)}</td>
-      <td style="border:1px solid #0E408B; padding:8px;">${escapeHtml(u.actividades)}</td>
-      <td style="border:1px solid #0E408B; padding:8px;">${escapeHtml(u.recursos)}</td>
-      <td style="border:1px solid #0E408B; padding:8px;">${escapeHtml(u.evaluacion)}</td>
-    </tr>
-  `).join('');
-
-  const htmlWord = `
+  const fullWordHTML = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='[http://www.w3.org/TR/REC-html40](http://www.w3.org/TR/REC-html40)'>
-    <head><meta charset='utf-8'><title>${escapeHtml(d.asignatura)}</title>
-    <style>
-      body { font-family: 'Segoe UI', Arial, sans-serif; color:#1B2530; margin:20mm; }
-      .header-title { text-align:center; background:#02244F; color:#FFFFFF; padding:15pt; }
-      h1 { font-size:16pt; margin:0; }
-      h2 { font-size:12pt; margin:3pt 0; color:#CFE0F5; }
-      .titulo { font-size:18pt; font-weight:bold; color:#F7A307; margin-top:10pt; }
-      .seccion-h { background:#0E408B; color:#FFFFFF; padding:4pt 8pt; font-size:11pt; margin-top:15pt; }
-      table { width:100%; border-collapse:collapse; font-size:10pt; }
-    </style>
+    <head>
+      <meta charset='utf-8'>
+      <title>Guía Metodológica UPNFM</title>
+      <!--[if gte mso 9]>
+      <xml>
+        <w:WordDocument>
+          <w:View>Print</w:View>
+          <w:Zoom>100</w:Zoom>
+          <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+      </xml>
+      <![endif]-->
+      <style>
+        @page Section1 {
+          size: 8.5in 11.0in;
+          margin: 0.5in;
+          mso-page-orientation: portrait;
+        }
+        div.Section1 { page: Section1; }
+        @page Section2 {
+          size: 11.0in 8.5in;
+          margin: 0.5in;
+          mso-page-orientation: landscape;
+        }
+        div.Section2 { page: Section2; }
+
+        body {
+          font-family: 'Segoe UI', Arial, sans-serif;
+          color: #1B2530;
+          font-size: 10.5pt;
+          line-height: 1.5;
+        }
+        .doc-header {
+          background: #02244F;
+          color: #FFFFFF;
+          padding: 16pt;
+          text-align: center;
+        }
+        .doc-header h2 { font-size: 13pt; margin: 0; }
+        .doc-header h3 { font-size: 10pt; margin: 2pt 0; color: #CFE0F5; }
+        .titulo-guia { font-size: 16pt; font-weight: bold; color: #F7A307; margin-top: 8pt; }
+        .doc-section { margin-top: 16pt; }
+        .doc-section h4 {
+          background: #0E408B;
+          color: #FFFFFF;
+          padding: 4pt 8pt;
+          font-size: 11pt;
+          display: inline-block;
+          margin: 0 0 6pt 0;
+        }
+        .accent-bar {
+          height: 2pt;
+          width: 40pt;
+          background: #F05A12;
+          margin-bottom: 8pt;
+        }
+        table.doc-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 6pt;
+          font-size: 9.5pt;
+        }
+        table.doc-table th {
+          background: #0E408B;
+          color: #FFFFFF;
+          border: 1pt solid #02244F;
+          padding: 6pt;
+          text-align: left;
+        }
+        table.doc-table td {
+          border: 1pt solid #D8DEE7;
+          padding: 5pt;
+          vertical-align: top;
+        }
+        table.identif td.label {
+          background: #EAF1FB;
+          font-weight: bold;
+          color: #02244F;
+        }
+        ul.doc-list { margin: 4pt 0 4pt 18pt; padding: 0; }
+        ul.doc-list li { margin-bottom: 3pt; }
+      </style>
     </head>
     <body>
-      <div class="header-title">
-        <h1>UNIVERSIDAD PEDAGÓGICA NACIONAL FRANCISCO MORAZÁN</h1>
-        <h2>PROGRAMA DE EDUCACIÓN VIRTUAL</h2>
-        <h2>${escapeHtml(d.facultad).toUpperCase()} · ${escapeHtml(d.departamento).toUpperCase()}</h2>
-        <div class="titulo">GUÍA METODOLÓGICA DE APRENDIZAJE</div>
-        <div style="color:#FFFFFF; font-size:13pt; margin-top:4pt;">${escapeHtml(d.asignatura).toUpperCase()}</div>
+      <div class="Section1">
+        ${portraitHTML}
       </div>
-
-      <div class="seccion-h">I. DATOS DE IDENTIFICACIÓN</div>
-      <table border="1" style="border-collapse:collapse; margin-top:6pt;">
-        <tr><td style="background:#EAF1FB; font-weight:bold; width:25%;">Espacio:</td><td>${escapeHtml(d.asignatura)}</td><td style="background:#EAF1FB; font-weight:bold; width:25%;">Código:</td><td>${escapeHtml(d.codigo)}</td></tr>
-        <tr><td style="background:#EAF1FB; font-weight:bold;">Modalidad:</td><td>${escapeHtml(d.modalidad)}</td><td style="background:#EAF1FB; font-weight:bold;">Período:</td><td>${escapeHtml(d.periodo)}</td></tr>
-        <tr><td style="background:#EAF1FB; font-weight:bold;">Profesor(a):</td><td>${escapeHtml(d.docente)}</td><td style="background:#EAF1FB; font-weight:bold;">Correo:</td><td>${escapeHtml(d.emailDocente)}</td></tr>
-      </table>
-
-      <div class="seccion-h">II. INTRODUCCIÓN Y PRESENTACIÓN</div>
-      <p>${escapeHtml(g.introduccion)}</p>
-
-      <div class="seccion-h">III. COMPETENCIAS DEL ESPACIO</div>
-      <ul>
-        ${(g.competencias || []).map(c => `<li>${escapeHtml(c)}</li>`).join('')}
-      </ul>
-
-      <div class="seccion-h">IV. METODOLOGÍA</div>
-      <p>${escapeHtml(g.metodologia)}</p>
-
-      <div class="seccion-h">V. PLANIFICACIÓN DIDÁCTICA MODULAR</div>
-      <table border="1" style="border-collapse:collapse; margin-top:6pt;">
-        <tr style="background:#0E408B; color:#FFFFFF;">
-          <th>Semana</th><th>Unidad y Contenidos</th><th>Actividades</th><th>Recursos</th><th>Evaluación</th>
-        </tr>
-        ${rowsWord}
-      </table>
-
-      <div class="seccion-h">VI. POLÍTICAS DE EVALUACIÓN</div>
-      <p>${escapeHtml(g.evaluacion)}</p>
+      <br clear=all style='page-break-before:always; mso-break-type:section-break'>
+      <div class="Section2">
+        ${landscapeHTML}
+      </div>
     </body>
     </html>
   `;
 
-  const blob = new Blob(['\ufeff', htmlWord], { type: 'application/msword' });
+  const blob = new Blob(['\ufeff', fullWordHTML], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Guia_Metodologica_${nombreLimpio}.doc`;
+  a.download = `Guia_Metodologica_${cleanName}.doc`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
+// 10. Exportación a PDF con html2canvas y jsPDF
+async function exportToPdf(btn){
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Procesando PDF...';
+
+  try{
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const margin = 8;
+    let isFirstPage = true;
+
+    async function appendElementToPdf(el, orientation, scale = 2){
+      const canvas = await html2canvas(el, {
+        scale: scale,
+        backgroundColor: '#FFFFFF',
+        useCORS: true,
+        logging: false
+      });
+
+      const isLandscape = orientation === 'landscape';
+      const pageWidth = isLandscape ? 297 : 210;
+      const pageHeight = isLandscape ? 210 : 297;
+      const usableWidth = pageWidth - (margin * 2);
+      const usableHeight = pageHeight - (margin * 2);
+
+      const pxPerMM = canvas.width / usableWidth;
+      const pageHeightPx = usableHeight * pxPerMM;
+
+      let renderedPx = 0;
+
+      while(renderedPx < canvas.height){
+        const sliceHeightPx = Math.min(pageHeightPx, canvas.height - renderedPx);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceHeightPx;
+        const ctx = sliceCanvas.getContext('2d');
+
+        ctx.drawImage(
+          canvas,
+          0, renderedPx, canvas.width, sliceHeightPx,
+          0, 0, canvas.width, sliceHeightPx
+        );
+
+        const imgData = sliceCanvas.toDataURL('image/png');
+        const sliceHeightMM = sliceHeightPx / pxPerMM;
+
+        if(!isFirstPage){
+          pdf.addPage('a4', orientation);
+        } else {
+          isFirstPage = false;
+        }
+
+        pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, sliceHeightMM);
+        renderedPx += sliceHeightPx;
+      }
+    }
+
+    // Retrato para Portada y Secciones descriptivas
+    await appendElementToPdf(document.getElementById('docPortraitSection'), 'portrait', 2);
+    // Paisaje para las Tablas instruccionales
+    await appendElementToPdf(document.getElementById('docLandscapeSection'), 'landscape', 2.2);
+
+    const cleanName = (state.espacio.nombreEspacio || 'Guia_Metodologica').replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+/g, '_');
+    pdf.save(`Guia_Metodologica_${cleanName}.pdf`);
+  }catch(err){
+    alert('Error al generar PDF: ' + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function escapeHtml(str){
+  if(!str) return '';
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
