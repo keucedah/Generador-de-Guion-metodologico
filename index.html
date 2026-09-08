@@ -266,6 +266,25 @@
     height:1px;
     background:#E1E6EE;
   }
+  .manual-mode-box{
+    background:#F0F7FF;
+    border:1.5px solid #BFDBFE;
+    border-radius:10px;
+    padding:18px;
+    margin-top:18px;
+  }
+  .manual-mode-box h3{
+    margin:0 0 6px;
+    color:var(--azul-principal);
+    font-size:14.5px;
+  }
+  .manual-step{
+    font-size:13px;
+    color:#3B4A5E;
+    margin:10px 0;
+    line-height:1.5;
+  }
+  .manual-step b{ color: var(--azul-principal); }
 
   /* ---- Preview / documento generado ---- */
   .doc-wrap{
@@ -946,7 +965,8 @@ const state = {
   generated: null,
   loading: false,
   error: null,
-  apiKey: '' // solo necesaria cuando la app corre fuera de claude.ai (ej. GitHub Pages)
+  apiKey: '', // solo necesaria cuando la app corre fuera de claude.ai (ej. GitHub Pages)
+  manualMode: { promptCopied:false, pastedResponse:'', error:'' }
 };
 
 // Intenta recuperar una API key guardada previamente (solo funciona en un sitio propio como
@@ -1183,6 +1203,91 @@ function renderStep3(){
     card.appendChild(el(`<div class="error-box">${state.error}</div>`));
   }
 
+  // --- Modo manual (gratis, usando tu cuenta de claude.ai, incluida en Pro) ---
+  const manualBox = document.createElement('div');
+  manualBox.className = 'manual-mode-box';
+  manualBox.appendChild(el(`<h3>✅ Opción gratis: usa tu cuenta de Claude.ai (Pro, Free, etc.)</h3>`));
+  manualBox.appendChild(el(`<p class="hint" style="margin-top:0;">La API de Anthropic se cobra por separado de tu suscripción a claude.ai. Si no quieres pagar por API, usa este modo: copia el prompt, pégalo en claude.ai (donde ya tienes acceso), y pega aquí la respuesta.</p>`));
+
+  manualBox.appendChild(el(`<div class="manual-step"><b>Paso 1.</b> Presiona el botón — se copiará el prompt a tu portapapeles y se abrirá claude.ai en una pestaña nueva.</div>`));
+  const copyBtn = el(`<button class="btn-gold">📋 Copiar prompt y abrir Claude.ai</button>`);
+  copyBtn.onclick = async ()=>{
+    if(state.uploadedFile.status === 'loading'){
+      alert('Espera a que termine de leerse el documento.'); return;
+    }
+    const hasDescripcion = state.descripcion && state.descripcion.trim().length >= 15;
+    const hasFile = state.uploadedFile.status === 'ready' && state.uploadedFile.text;
+    if(!hasDescripcion && !hasFile){
+      alert('Escribe una descripción mínima o sube un documento con la información del espacio formativo.'); return;
+    }
+    const prompt = buildPrompt();
+    try{
+      await navigator.clipboard.writeText(prompt);
+      state.manualMode.promptCopied = true;
+      window.open('https://claude.ai/new', '_blank');
+      render();
+    }catch(err){
+      // Si el portapapeles no está disponible, mostramos el prompt para copiar a mano
+      state.manualMode.promptCopied = true;
+      state.manualMode.fallbackPrompt = prompt;
+      window.open('https://claude.ai/new', '_blank');
+      render();
+    }
+  };
+  manualBox.appendChild(copyBtn);
+
+  if(state.manualMode.fallbackPrompt){
+    manualBox.appendChild(el(`<p class="hint" style="margin-top:8px;">No se pudo copiar automáticamente. Copia el texto de abajo manualmente:</p>`));
+    const fallbackTa = document.createElement('textarea');
+    fallbackTa.rows = 5;
+    fallbackTa.readOnly = true;
+    fallbackTa.value = state.manualMode.fallbackPrompt;
+    fallbackTa.style.fontSize = '11px';
+    manualBox.appendChild(fallbackTa);
+  }
+
+  if(state.manualMode.promptCopied){
+    manualBox.appendChild(el(`<div class="manual-step"><b>Paso 2.</b> En la pestaña de Claude.ai, pega el prompt (Ctrl+V) y envíalo. Espera la respuesta completa.</div>`));
+    manualBox.appendChild(el(`<div class="manual-step"><b>Paso 3.</b> Copia TODA la respuesta que te dio Claude (el bloque de código/JSON completo) y pégala aquí abajo:</div>`));
+
+    const pasteTa = document.createElement('textarea');
+    pasteTa.rows = 6;
+    pasteTa.placeholder = 'Pega aquí la respuesta completa que te dio Claude.ai...';
+    pasteTa.value = state.manualMode.pastedResponse;
+    pasteTa.oninput = (e)=>{ state.manualMode.pastedResponse = e.target.value; };
+    manualBox.appendChild(pasteTa);
+
+    if(state.manualMode.error){
+      manualBox.appendChild(el(`<div class="error-box">${state.manualMode.error}</div>`));
+    }
+
+    const useBtn = el(`<button class="btn-primary" style="margin-top:10px;">Usar esta respuesta ✅</button>`);
+    useBtn.onclick = ()=>{
+      const raw = state.manualMode.pastedResponse;
+      if(!raw || raw.trim().length < 20){
+        state.manualMode.error = 'Pega la respuesta completa que te dio Claude antes de continuar.';
+        render(); return;
+      }
+      try{
+        const parsed = tryParseJson(raw);
+        state.generated = parsed;
+        state.manualMode.error = '';
+        state.error = null;
+        state.step = 4;
+        render();
+      }catch(err){
+        console.error(err);
+        state.manualMode.error = 'No se pudo interpretar la respuesta como JSON válido. Asegúrate de haber copiado la respuesta completa de Claude (debe ser solo el objeto JSON, sin texto extra antes o después).';
+        render();
+      }
+    };
+    manualBox.appendChild(useBtn);
+  }
+
+  card.appendChild(manualBox);
+
+  card.appendChild(el(`<div class="divider-or">O TAMBIÉN</div>`));
+
   // --- Configuración avanzada: API key (solo necesaria fuera de claude.ai, ej. GitHub Pages) ---
   const details = document.createElement('details');
   details.style.marginTop = '18px';
@@ -1192,12 +1297,12 @@ function renderStep3(){
   summary.style.fontSize = '12.5px';
   summary.style.color = '#7A8697';
   summary.style.fontWeight = '600';
-  summary.textContent = '⚙️ Configuración avanzada (API key de Claude/Anthropic — solo si usas esta app fuera de claude.ai)';
+  summary.textContent = '💳 Modo automático de pago (API key de Claude/Anthropic con saldo — opcional)';
   details.appendChild(summary);
 
   const keyWrap = document.createElement('div');
   keyWrap.style.marginTop = '10px';
-  keyWrap.appendChild(el(`<p class="hint" style="margin-top:0;">Si accediste a este generador desde un sitio propio (por ejemplo GitHub Pages) en vez de claude.ai, necesitas pegar aquí tu propia API key de <strong>Claude (Anthropic)</strong> para que la generación con IA funcione. Se guarda solo en tu navegador.</p>`));
+  keyWrap.appendChild(el(`<p class="hint" style="margin-top:0;">Si prefieres que la generación sea automática (sin copiar/pegar), puedes pegar aquí tu propia API key de <strong>Claude (Anthropic)</strong> — esto requiere crédito de pago cargado en console.anthropic.com, separado de tu suscripción a claude.ai. Se guarda solo en tu navegador.</p>`));
   keyWrap.appendChild(el(`<p class="hint" style="margin-top:4px;color:#B23B1F;font-weight:600;">⚠️ Solo se aceptan API keys de Claude/Anthropic (formato sk-ant-...). No uses claves de Gemini, ChatGPT/OpenAI u otro proveedor — no funcionarán.</p>`));
   const keyInput = document.createElement('input');
   keyInput.type = 'password';
@@ -1226,7 +1331,7 @@ function renderStep3(){
   const nav = el(`<div class="nav-row"></div>`);
   const back = el(`<button class="btn-secondary">← Atrás</button>`);
   back.onclick = ()=>{ state.step=2; render(); };
-  const gen = el(`<button class="btn-primary">Generar guión con IA ✨</button>`);
+  const gen = el(`<button class="btn-outline">Generar automáticamente (con API key) ⚡</button>`);
   gen.onclick = ()=>{
     if(state.uploadedFile.status === 'loading'){
       alert('Espera a que termine de leerse el documento.'); return;
@@ -1235,6 +1340,10 @@ function renderStep3(){
     const hasFile = state.uploadedFile.status === 'ready' && state.uploadedFile.text;
     if(!hasDescripcion && !hasFile){
       alert('Escribe una descripción mínima o sube un documento con la información del espacio formativo.'); return;
+    }
+    if(!state.apiKey || !state.apiKey.trim()){
+      alert('Para generar automáticamente necesitas ingresar y guardar tu API key en "💳 Modo automático de pago" (más abajo). Si no quieres pagar por API, usa la opción gratis "Usa tu cuenta de Claude.ai" de arriba.');
+      return;
     }
     generateGuion();
   };
