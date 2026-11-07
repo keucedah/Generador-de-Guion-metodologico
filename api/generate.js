@@ -115,7 +115,9 @@ export default async function handler(req, res) {
           temperature: 0.4,
           // Margen amplio: en los modelos recientes el "razonamiento" interno también cuenta aquí.
           maxOutputTokens: 32768,
-          responseMimeType: 'application/json'
+          responseMimeType: 'application/json',
+          // En los modelos Gemini 3 el razonamiento "bajo" responde en la mitad del tiempo.
+          ...(model.startsWith('gemini-3') ? { thinkingConfig: { thinkingLevel: 'low' } } : {})
         }
       })
     });
