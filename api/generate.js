@@ -102,7 +102,7 @@ export default async function handler(req, res) {
   }
 
   // El modelo se puede cambiar desde Vercel con la variable GEMINI_MODEL sin tocar el código.
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
   try {
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
         contents: [{ role: 'user', parts: [{ text: buildPrompt(body) }] }],
         generationConfig: {
           temperature: 0.4,
-          // Margen amplio: en los modelos 2.5 el "razonamiento" interno también cuenta aquí.
+          // Margen amplio: en los modelos recientes el "razonamiento" interno también cuenta aquí.
           maxOutputTokens: 32768,
           responseMimeType: 'application/json'
         }
