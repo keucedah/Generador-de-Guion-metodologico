@@ -13,7 +13,7 @@ una función de Vercel que usa la clave de Gemini guardada en el servidor.
    (sin cambiar ninguna opción de compilación).
 3. Antes de desplegar (o después en **Settings → Environment Variables**) agrega:
    - `GEMINI_API_KEY` = tu clave de Gemini
-   - `GEMINI_MODEL` (opcional) = modelo a usar; por defecto `gemini-2.5-flash`
+   - `GEMINI_MODEL` (opcional) = modelo a usar; por defecto `gemini-3.8-flash`
 4. Despliega. Si agregas o cambias variables después, haz **Redeploy** para que se apliquen.
 
 Cada vez que se suban cambios a la rama principal, Vercel vuelve a publicar automáticamente.
