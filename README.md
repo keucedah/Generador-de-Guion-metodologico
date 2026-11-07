@@ -22,7 +22,7 @@ Cada vez que se suban cambios a la rama principal, Vercel vuelve a publicar auto
 
 - `index.html` — la aplicación completa (incluye las librerías para leer PDF/Word y exportar).
 - `api/generate.js` — función del servidor que arma el prompt y llama a Gemini.
-- `vercel.json` — da hasta 60 segundos a la generación.
+- `vercel.json` — da hasta 300 segundos a la generación.
 
 Si la generación automática no está disponible (por ejemplo, abriendo `index.html`
 directamente o en GitHub Pages), la página ofrece una alternativa manual de copiar y pegar
