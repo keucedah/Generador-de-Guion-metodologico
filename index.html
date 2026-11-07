@@ -965,16 +965,11 @@ const state = {
   generated: null,
   loading: false,
   error: null,
-  apiKey: '', // solo necesaria cuando la app corre fuera de claude.ai (ej. GitHub Pages)
   manualMode: { promptCopied:false, pastedResponse:'', error:'' }
 };
 
-// Intenta recuperar una API key guardada previamente (solo funciona en un sitio propio como
-// GitHub Pages; dentro de claude.ai localStorage no está disponible y esto falla en silencio).
-try{
-  const savedKey = localStorage.getItem('guia_metodologica_anthropic_key');
-  if(savedKey) state.apiKey = savedKey;
-}catch(e){ /* localStorage no disponible en este entorno; se ignora */ }
+// Limpia la API key que versiones anteriores guardaban en el navegador (ya no se usa).
+try{ localStorage.removeItem('guia_metodologica_anthropic_key'); }catch(e){}
 
 function getFacultadFinal(){
   return state.espacio.facultad === 'Otro' ? (state.espacio.facultadOtro || '').trim() : state.espacio.facultad;
@@ -1203,11 +1198,41 @@ function renderStep3(){
     card.appendChild(el(`<div class="error-box">${state.error}</div>`));
   }
 
-  // --- Modo manual (gratis, usando tu cuenta de claude.ai, incluida en Pro) ---
+  // --- Generación automática (servidor con Gemini, sin API key para el docente) ---
+  const nav = el(`<div class="nav-row"></div>`);
+  const back = el(`<button class="btn-secondary">← Atrás</button>`);
+  back.onclick = ()=>{ state.step=2; render(); };
+  const gen = el(`<button class="btn-primary">Generar guía con IA ⚡</button>`);
+  gen.onclick = ()=>{
+    if(state.uploadedFile.status === 'loading'){
+      alert('Espera a que termine de leerse el documento.'); return;
+    }
+    const hasDescripcion = state.descripcion && state.descripcion.trim().length >= 15;
+    const hasFile = state.uploadedFile.status === 'ready' && state.uploadedFile.text;
+    if(!hasDescripcion && !hasFile){
+      alert('Escribe una descripción mínima o sube un documento con la información del espacio formativo.'); return;
+    }
+    generateGuion();
+  };
+  nav.appendChild(back); nav.appendChild(gen);
+  card.appendChild(nav);
+
+  // --- Modo manual de respaldo (copiar/pegar en claude.ai) ---
+  const details = document.createElement('details');
+  details.style.marginTop = '18px';
+  if(state.manualMode.promptCopied) details.open = true;
+  const summary = document.createElement('summary');
+  summary.style.cursor = 'pointer';
+  summary.style.fontSize = '12.5px';
+  summary.style.color = '#7A8697';
+  summary.style.fontWeight = '600';
+  summary.textContent = 'Alternativa manual: generar copiando y pegando en Claude.ai';
+  details.appendChild(summary);
+
   const manualBox = document.createElement('div');
   manualBox.className = 'manual-mode-box';
-  manualBox.appendChild(el(`<h3>✅ Opción gratis: usa tu cuenta de Claude.ai (Pro, Free, etc.)</h3>`));
-  manualBox.appendChild(el(`<p class="hint" style="margin-top:0;">La API de Anthropic se cobra por separado de tu suscripción a claude.ai. Si no quieres pagar por API, usa este modo: copia el prompt, pégalo en claude.ai (donde ya tienes acceso), y pega aquí la respuesta.</p>`));
+  manualBox.appendChild(el(`<h3>Opción manual con tu cuenta de Claude.ai</h3>`));
+  manualBox.appendChild(el(`<p class="hint" style="margin-top:0;">Úsala solo si la generación automática no está disponible: copia el prompt, pégalo en claude.ai y pega aquí la respuesta.</p>`));
 
   manualBox.appendChild(el(`<div class="manual-step"><b>Paso 1.</b> Presiona el botón — se copiará el prompt a tu portapapeles y se abrirá claude.ai en una pestaña nueva.</div>`));
   const copyBtn = el(`<button class="btn-gold">📋 Copiar prompt y abrir Claude.ai</button>`);
@@ -1284,71 +1309,8 @@ function renderStep3(){
     manualBox.appendChild(useBtn);
   }
 
-  card.appendChild(manualBox);
-
-  card.appendChild(el(`<div class="divider-or">O TAMBIÉN</div>`));
-
-  // --- Configuración avanzada: API key (solo necesaria fuera de claude.ai, ej. GitHub Pages) ---
-  const details = document.createElement('details');
-  details.style.marginTop = '18px';
-  if(state.apiKey) details.open = false;
-  const summary = document.createElement('summary');
-  summary.style.cursor = 'pointer';
-  summary.style.fontSize = '12.5px';
-  summary.style.color = '#7A8697';
-  summary.style.fontWeight = '600';
-  summary.textContent = '💳 Modo automático de pago (API key de Claude/Anthropic con saldo — opcional)';
-  details.appendChild(summary);
-
-  const keyWrap = document.createElement('div');
-  keyWrap.style.marginTop = '10px';
-  keyWrap.appendChild(el(`<p class="hint" style="margin-top:0;">Si prefieres que la generación sea automática (sin copiar/pegar), puedes pegar aquí tu propia API key de <strong>Claude (Anthropic)</strong> — esto requiere crédito de pago cargado en console.anthropic.com, separado de tu suscripción a claude.ai. Se guarda solo en tu navegador.</p>`));
-  keyWrap.appendChild(el(`<p class="hint" style="margin-top:4px;color:#B23B1F;font-weight:600;">⚠️ Solo se aceptan API keys de Claude/Anthropic (formato sk-ant-...). No uses claves de Gemini, ChatGPT/OpenAI u otro proveedor — no funcionarán.</p>`));
-  const keyInput = document.createElement('input');
-  keyInput.type = 'password';
-  keyInput.placeholder = 'sk-ant-...';
-  keyInput.value = state.apiKey;
-  keyInput.oninput = (e)=>{ state.apiKey = e.target.value; };
-  keyWrap.appendChild(keyInput);
-  const saveKeyBtn = el(`<button class="btn-outline" style="margin-top:10px;padding:8px 14px;font-size:12.5px;">Guardar API key</button>`);
-  saveKeyBtn.onclick = ()=>{
-    const key = (state.apiKey || '').trim();
-    if(key && !key.startsWith('sk-ant-')){
-      const continuar = confirm('Esa clave no parece una API key de Claude/Anthropic (deben empezar con "sk-ant-"). Solo se aceptan claves de Claude; las de Gemini, ChatGPT/OpenAI u otros proveedores no funcionarán.\n\n¿Guardarla de todas formas?');
-      if(!continuar) return;
-    }
-    try{
-      localStorage.setItem('guia_metodologica_anthropic_key', state.apiKey);
-      alert('API key de Claude guardada en este navegador.');
-    }catch(e){
-      alert('No se pudo guardar (este entorno no permite almacenamiento local). La key se usará solo durante esta sesión.');
-    }
-  };
-  keyWrap.appendChild(saveKeyBtn);
-  details.appendChild(keyWrap);
+  details.appendChild(manualBox);
   card.appendChild(details);
-
-  const nav = el(`<div class="nav-row"></div>`);
-  const back = el(`<button class="btn-secondary">← Atrás</button>`);
-  back.onclick = ()=>{ state.step=2; render(); };
-  const gen = el(`<button class="btn-outline">Generar automáticamente (con API key) ⚡</button>`);
-  gen.onclick = ()=>{
-    if(state.uploadedFile.status === 'loading'){
-      alert('Espera a que termine de leerse el documento.'); return;
-    }
-    const hasDescripcion = state.descripcion && state.descripcion.trim().length >= 15;
-    const hasFile = state.uploadedFile.status === 'ready' && state.uploadedFile.text;
-    if(!hasDescripcion && !hasFile){
-      alert('Escribe una descripción mínima o sube un documento con la información del espacio formativo.'); return;
-    }
-    if(!state.apiKey || !state.apiKey.trim()){
-      alert('Para generar automáticamente necesitas ingresar y guardar tu API key en "💳 Modo automático de pago" (más abajo). Si no quieres pagar por API, usa la opción gratis "Usa tu cuenta de Claude.ai" de arriba.');
-      return;
-    }
-    generateGuion();
-  };
-  nav.appendChild(back); nav.appendChild(gen);
-  card.appendChild(nav);
   return card;
 }
 
@@ -1519,41 +1481,31 @@ async function generateGuion(){
   render();
 
   try{
-    // Si el usuario configuró su propia API key (necesario fuera de claude.ai, ej. GitHub Pages),
-    // la usamos con el header que habilita llamadas directas desde el navegador.
-    // Si no hay key guardada, intentamos la llamada "sin key" (funciona dentro del entorno
-    // de artefactos de claude.ai, que intercepta e inyecta la autenticación automáticamente).
-    const headers = { "Content-Type": "application/json" };
-    if(state.apiKey && state.apiKey.trim()){
-      headers["x-api-key"] = state.apiKey.trim();
-      headers["anthropic-version"] = "2023-06-01";
-      headers["anthropic-dangerous-direct-browser-access"] = "true";
-    }
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // La IA se llama desde el servidor (api/generate.js en Vercel), que guarda la API key.
+    // El docente no necesita ninguna clave.
+    const fileReady = state.uploadedFile.status === 'ready' && state.uploadedFile.text;
+    const response = await fetch("/api/generate", {
       method: "POST",
-      headers,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 8000,
-        messages: [{ role: "user", content: buildPrompt() }]
+        docente: state.docente,
+        espacio: state.espacio,
+        descripcion: state.descripcion,
+        fileText: fileReady ? state.uploadedFile.text : '',
+        fileName: fileReady ? state.uploadedFile.name : ''
       })
     });
 
+    if(response.status === 404 || response.status === 405){
+      throw new Error('El servicio de IA no está disponible en este sitio. La app debe estar publicada en Vercel para generar automáticamente; mientras tanto puedes usar la alternativa manual.');
+    }
+
+    const data = await response.json().catch(()=>({}));
     if(!response.ok){
-      let detail = '';
-      try{ const errJson = await response.json(); detail = errJson?.error?.message || ''; }catch(e){}
-      throw new Error('Error de la API (' + response.status + ')' + (detail ? ': ' + detail : ''));
+      throw new Error(data.error || ('Error del servidor (' + response.status + ').'));
     }
 
-    const data = await response.json();
-
-    if(data.stop_reason === 'max_tokens'){
-      throw new Error('La respuesta de la IA fue demasiado larga y se cortó. Intenta con una descripción mínima más breve, o presiona "Regenerar".');
-    }
-
-    const textBlock = (data.content || []).map(b=>b.text || '').join('\n').trim();
-    const parsed = tryParseJson(textBlock);
+    const parsed = tryParseJson(data.text || '');
 
     state.generated = parsed;
     state.error = null;
@@ -1563,12 +1515,11 @@ async function generateGuion(){
   }catch(err){
     console.error(err);
     state.loading = false;
-    const fueraDeClaudeAi = !window.location.hostname.includes('claude.ai') && !window.location.hostname.includes('claudeusercontent.com');
     let mensaje = 'No se pudo generar la guía automáticamente. ';
-    if((err.message || '').includes('Failed to fetch') && !state.apiKey){
-      mensaje += fueraDeClaudeAi
-        ? 'Esta app está corriendo fuera de claude.ai, así que necesitas ingresar tu propia API key de Anthropic en "⚙️ Configuración avanzada" (más abajo) para poder generar con IA.'
-        : 'Verifica tu conexión e inténtalo de nuevo.';
+    if((err.message || '').includes('Failed to fetch')){
+      mensaje += 'Verifica tu conexión e inténtalo de nuevo.';
+    } else if(err instanceof SyntaxError){
+      mensaje += 'La respuesta de la IA no tuvo el formato esperado. Presiona "Generar" de nuevo.';
     } else {
       mensaje += err.message || 'Intenta nuevamente.';
     }
