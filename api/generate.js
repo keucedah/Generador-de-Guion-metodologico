@@ -1,87 +1,153 @@
 // api/generate.js
+// Función serverless de Vercel: recibe los datos del formulario, arma el prompt
+// y llama a Gemini usando la API key guardada en las variables de entorno de Vercel.
+// Así los docentes no necesitan ninguna API key.
+
+const MAX_FILE_CHARS = 12000;
+const MAX_DESC_CHARS = 4000;
+const MAX_FIELD_CHARS = 300;
+
+function clip(value, max = MAX_FIELD_CHARS) {
+  return String(value ?? '').slice(0, max);
+}
+
+function buildPrompt({ docente = {}, espacio = {}, descripcion = '', fileText = '', fileName = '' }) {
+  const facultad = espacio.facultad === 'Otro' ? espacio.facultadOtro : espacio.facultad;
+  const depto = espacio.depto === 'Otro' ? espacio.deptoOtro : espacio.depto;
+
+  let texto = clip(fileText, MAX_FILE_CHARS + 100);
+  if (String(fileText || '').length > MAX_FILE_CHARS) {
+    texto = String(fileText).slice(0, MAX_FILE_CHARS) + '\n[...documento truncado por longitud...]';
+  }
+  const desc = clip(descripcion, MAX_DESC_CHARS).trim();
+
+  let fuenteInfo = '';
+  if (texto) {
+    fuenteInfo += `CONTENIDO EXTRAÍDO DEL DOCUMENTO SUBIDO POR EL DOCENTE (archivo: "${clip(fileName)}"). Trátalo como la FUENTE PRINCIPAL y más detallada de información para construir la guía:\n"""\n${texto}\n"""\n\n`;
+  }
+  if (desc) {
+    fuenteInfo += `DESCRIPCIÓN MÍNIMA ${texto ? 'ADICIONAL ' : ''}PROPORCIONADA POR EL DOCENTE:\n"${desc}"\n\n`;
+  }
+  if (!fuenteInfo) {
+    fuenteInfo = 'El docente no proporcionó descripción ni documento adicional; usa buen juicio pedagógico basándote en el nombre y datos del espacio pedagógico proporcionados.\n\n';
+  }
+
+  return `Eres un experto en diseño curricular y educación virtual universitaria de la UNIVERSIDAD PEDAGÓGICA NACIONAL FRANCISCO MORAZÁN (UPNFM), Vicerrectoría de Educación a Distancia, Programa de Educación Virtual.
+
+Debes generar el contenido completo de una "Guía Metodológica" a partir de los siguientes datos:
+
+DATOS DEL DOCENTE:
+- Nombre: ${clip(docente.nombre)}
+- Email: ${clip(docente.email)}
+- Horario de atención a consultas: ${clip(docente.horarioAtencion)}
+
+DATOS DEL ESPACIO FORMATIVO:
+- Facultad: ${clip(facultad)}
+- Departamento/Sección Académica: ${clip(depto)}
+- Periodo académico: ${clip(espacio.periodo)}
+- Código: ${clip(espacio.codigo)}
+- Nombre del espacio pedagógico: ${clip(espacio.nombreEspacio)}
+- UV: ${clip(espacio.uv)}
+- Requisitos: ${clip(espacio.requisitos)}
+- Modalidad: ${clip(espacio.modalidad)}
+- Fechas: ${clip(espacio.fechas)}
+- Horario de la clase: ${clip(espacio.horarioClase)}
+
+${fuenteInfo}Con base en esto, redacta TODO el contenido pedagógico de la guía, desarrollando y ampliando profesionalmente lo que sea necesario. Si se proporcionó contenido de un documento subido, extrae y reorganiza su información real (objetivos, temas, evaluación, etc.) en la estructura solicitada, en lugar de inventar contenido genérico.
+
+Responde ÚNICAMENTE con un objeto JSON válido (sin texto adicional, sin markdown), con exactamente esta estructura:
+
+{
+  "descripcion_espacio": "string - descripción ampliada y profesional del espacio formativo, 2-4 párrafos",
+  "saberes_previos": "string - saberes y experiencias previas esperadas del estudiante, 1-2 párrafos",
+  "competencias_genericas": "string - competencias genéricas y específicas a desarrollar, redactado en párrafo(s)",
+  "subcompetencias": "string - lista de sub-competencias, cada una en una línea nueva",
+  "contenidos": "string - contenidos del espacio formativo organizados por unidades o bloques temáticos",
+  "metodologia_trabajo": "string - metodología de trabajo en clase, incluyendo criterios de asistencia y lo esperado en encuentros sincrónicos",
+  "metodologia_evaluacion": "string - metodología de evaluación",
+  "documentos_materiales": "string - documentos y materiales a utilizar, uno por línea",
+  "planificacion_semanal": [
+    {"unidad":"string","temas":"string","competencias":"string","contenidos":"string","materiales":"string","actividades":"string","criterios":"string"}
+  ],
+  "encuentros_tutoriales": [
+    {"encuentro":"string (ej. 'Encuentro 1')","fecha":"string","unidades_temas":"string","actividades":"string"}
+  ],
+  "criterios_acreditacion": [
+    {"actividad":"string","porcentaje":"string (ej. '20%')","criterios":"string"}
+  ]
+}
+
+Reglas:
+- "planificacion_semanal" debe tener entre 3 y 6 unidades, coherentes con la información proporcionada.
+- "encuentros_tutoriales" debe tener entre 3 y 5 encuentros.
+- "criterios_acreditacion" debe tener entre 4 y 8 filas, y los porcentajes deben sumar 100%.
+- Todo el contenido debe estar en español, con redacción formal, académica y específica al tema descrito (no genérica).
+- No inventes datos de identificación distintos a los proporcionados.
+- Responde solo el JSON, nada más.`;
+}
+
 export default async function handler(req, res) {
-  // 1. Solo aceptar peticiones POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método no permitido. Usa POST.' });
   }
 
-  // 2. Leer la API Key de las variables de entorno de Vercel
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'Configuración del servidor incompleta (API Key ausente).' });
+    return res.status(500).json({ error: 'El servidor no tiene configurada la variable GEMINI_API_KEY en Vercel.' });
   }
 
-  // 3. Recibir el payload del frontend
-  const { docente, espacio, fileText, descripcion } = req.body;
+  const body = typeof req.body === 'string' ? safeParse(req.body) : (req.body || {});
+  if (!body || !body.espacio) {
+    return res.status(400).json({ error: 'Faltan los datos del espacio formativo.' });
+  }
 
-  // 4. Construir las instrucciones
-  const sysMsg = "Eres un especialista en diseño curricular de la UPNFM. Responde SIEMPRE en formato JSON válido estructurado.";
-  
-  const prompt = `
-Actúa como especialista en diseño curricular de la Universidad Pedagógica Nacional Francisco Morazán (UPNFM).
-Redacta la GUÍA METODOLÓGICA formal para este espacio formativo.
-
-DATOS:
-- Facultad: ${espacio.facultad === 'Otro' ? espacio.facultadOtro : espacio.facultad}
-- Departamento: ${espacio.depto === 'Otro' ? espacio.deptoOtro : espacio.depto}
-- Espacio Pedagógico: ${espacio.nombreEspacio} (${espacio.codigo})
-- Modalidad: ${espacio.modalidad}
-- Docente: ${docente.nombre}
-
-${fileText ? `CONTENIDO EXTRAÍDO (USAR COMO BASE ESTRICTA):\n"""\n${fileText}\n"""\n` : ''}
-${descripcion ? `INDICACIONES ADICIONALES:\n"""\n${descripcion}\n"""\n` : ''}
-
-Responde ÚNICAMENTE con un JSON que cumpla este esquema estricto:
-{
-  "descripcion_espacio": "Descripción ampliada (párrafo)",
-  "saberes_previos": "Saberes y experiencias previas",
-  "competencias_genericas": "Competencias a desarrollar",
-  "subcompetencias": "Sub1\\nSub2",
-  "contenidos": "Unidad 1\\n- Tema A",
-  "metodologia_trabajo": "Metodología de trabajo en clase...",
-  "metodologia_evaluacion": "Metodología de evaluación...",
-  "documentos_materiales": "Doc 1\\nDoc 2",
-  "planificacion_semanal": [
-    {"unidad":"Unidad I", "temas":"Tema 1", "competencias":"Comp...", "contenidos":"Cont...", "materiales":"Recurso...", "actividades":"Act...", "criterios":"Crit..."}
-  ],
-  "encuentros_tutoriales": [
-    {"encuentro":"Encuentro 1", "fecha":"Semana 2", "unidades_temas":"Unidad I", "actividades":"Foro..."}
-  ],
-  "criterios_acreditacion": [
-    {"actividad":"Foro", "porcentaje":"20%", "criterios":"Rúbrica"}
-  ]
-}`;
+  // El modelo se puede cambiar desde Vercel con la variable GEMINI_MODEL sin tocar el código.
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
   try {
-    // 5. Llamada segura a Gemini (forzando salida JSON nativa)
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    
     const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: sysMsg }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { 
+        contents: [{ role: 'user', parts: [{ text: buildPrompt(body) }] }],
+        generationConfig: {
           temperature: 0.4,
-          maxOutputTokens: 8192,
-          responseMimeType: "application/json" // Fuerza el JSON puro sin Markdown
+          // Margen amplio: en los modelos 2.5 el "razonamiento" interno también cuenta aquí.
+          maxOutputTokens: 32768,
+          responseMimeType: 'application/json'
         }
       })
     });
 
+    const data = await response.json().catch(() => ({}));
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Error en la API de Google');
+      const msg = data?.error?.message || `Error ${response.status} en la API de Gemini`;
+      return res.status(502).json({ error: msg });
     }
 
-    const data = await response.json();
-    const rawText = data.candidates[0].content.parts[0].text;
-    
-    // Devolver el JSON parseado al frontend
-    return res.status(200).json(JSON.parse(rawText));
+    const candidate = data?.candidates?.[0];
+    if (!candidate) {
+      const reason = data?.promptFeedback?.blockReason;
+      return res.status(502).json({ error: reason ? `Gemini bloqueó la solicitud (${reason}).` : 'Gemini no devolvió ninguna respuesta.' });
+    }
+    if (candidate.finishReason === 'MAX_TOKENS') {
+      return res.status(502).json({ error: 'La respuesta de la IA fue demasiado larga y se cortó. Intenta con un documento o descripción más breve.' });
+    }
 
+    const text = (candidate.content?.parts || []).map(p => p.text || '').join('').trim();
+    if (!text) {
+      return res.status(502).json({ error: 'Gemini devolvió una respuesta vacía. Intenta de nuevo.' });
+    }
+
+    // Se devuelve el texto; el navegador lo interpreta con su parser tolerante a errores.
+    return res.status(200).json({ text });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message || 'Error inesperado en el servidor.' });
   }
+}
+
+function safeParse(str) {
+  try { return JSON.parse(str); } catch { return null; }
 }
