@@ -101,16 +101,40 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Faltan los datos del espacio formativo.' });
   }
 
-  // El modelo se puede cambiar desde Vercel con la variable GEMINI_MODEL sin tocar el código.
-  const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  // Modelo principal (se puede cambiar en Vercel con GEMINI_MODEL) y modelos de respaldo
+  // por si el principal está saturado o deja de existir.
+  const primary = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  const models = [...new Set([primary, 'gemini-3.5-flash', 'gemini-flash-latest'])];
+  const prompt = buildPrompt(body);
 
+  let lastError = 'No se pudo contactar a Gemini.';
+  // Dos rondas por todos los modelos, con una pausa breve entre intentos.
+  for (let round = 0; round < 2; round++) {
+    for (const model of models) {
+      const result = await callGemini(model, prompt, apiKey);
+      if (result.text) return res.status(200).json({ text: result.text });
+      lastError = result.error;
+      if (!result.retryable) return res.status(502).json({ error: lastError });
+      await sleep(round === 0 ? 1500 : 4000);
+    }
+  }
+
+  return res.status(503).json({
+    error: 'El servicio de IA de Google está saturado en este momento. Espera un minuto y presiona "Generar" de nuevo.',
+    detalle: lastError
+  });
+}
+
+// Llama a un modelo. Devuelve { text } si funcionó, o { error, retryable }:
+// retryable = true cuando conviene probar de nuevo u otro modelo (saturación, límite, modelo no disponible).
+async function callGemini(model, prompt, apiKey) {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: buildPrompt(body) }] }],
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.4,
           // Margen amplio: en los modelos recientes el "razonamiento" interno también cuenta aquí.
@@ -126,28 +150,35 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const msg = data?.error?.message || `Error ${response.status} en la API de Gemini`;
-      return res.status(502).json({ error: msg });
+      // 401/403: clave inválida o bloqueada; reintentar no sirve.
+      if (response.status === 401 || response.status === 403) {
+        return { error: `La API key de Gemini no es válida o fue bloqueada: ${msg}`, retryable: false };
+      }
+      // 400 por un modelo retirado sí merece probar otro; otros 400 no.
+      const modeloNoDisponible = /no longer available|not found|not supported/i.test(msg);
+      if (response.status === 400 && !modeloNoDisponible) return { error: msg, retryable: false };
+      return { error: `${model}: ${msg}`, retryable: true };
     }
 
     const candidate = data?.candidates?.[0];
     if (!candidate) {
       const reason = data?.promptFeedback?.blockReason;
-      return res.status(502).json({ error: reason ? `Gemini bloqueó la solicitud (${reason}).` : 'Gemini no devolvió ninguna respuesta.' });
+      return { error: reason ? `Gemini bloqueó la solicitud (${reason}).` : 'Gemini no devolvió ninguna respuesta.', retryable: !reason };
     }
     if (candidate.finishReason === 'MAX_TOKENS') {
-      return res.status(502).json({ error: 'La respuesta de la IA fue demasiado larga y se cortó. Intenta con un documento o descripción más breve.' });
+      return { error: 'La respuesta de la IA fue demasiado larga y se cortó. Intenta con un documento o descripción más breve.', retryable: false };
     }
 
     const text = (candidate.content?.parts || []).map(p => p.text || '').join('').trim();
-    if (!text) {
-      return res.status(502).json({ error: 'Gemini devolvió una respuesta vacía. Intenta de nuevo.' });
-    }
-
-    // Se devuelve el texto; el navegador lo interpreta con su parser tolerante a errores.
-    return res.status(200).json({ text });
+    if (!text) return { error: 'Gemini devolvió una respuesta vacía.', retryable: true };
+    return { text };
   } catch (error) {
-    return res.status(500).json({ error: error.message || 'Error inesperado en el servidor.' });
+    return { error: error.message || 'Error de conexión con Gemini.', retryable: true };
   }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function safeParse(str) {
